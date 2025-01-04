@@ -309,7 +309,7 @@ class VoxelPostprocessor(BasePostprocessor):
                 pred_box2d_list.append(boxes2d_score)
                 pred_box3d_list.append(projected_boxes3d)
 
-        if len(pred_box2d_list) ==0 or len(pred_box3d_list) == 0:
+        if len(pred_box2d_list) == 0 or len(pred_box3d_list) == 0:
             return None, None
         # shape: (N, 5)
         pred_box2d_list = torch.vstack(pred_box2d_list)
