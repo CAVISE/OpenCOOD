@@ -147,8 +147,7 @@ class VoxelNetIntermediate(nn.Module):
                       'voxel_coords': voxel_coords,
                       'voxel_num_points': voxel_num_points}
 
-        if voxel_coords.is_cuda:
-            record_len_tmp = record_len.cpu()
+        record_len_tmp = record_len.cpu() if voxel_coords.is_cuda else record_len
 
         record_len_tmp = list(record_len_tmp.numpy())
 
