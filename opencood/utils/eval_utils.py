@@ -7,9 +7,12 @@ import os
 
 import numpy as np
 import torch
+import logging
 
 from opencood.utils import common_utils
 from opencood.hypes_yaml import yaml_utils
+
+logger = logging.getLogger("cavise.OpenCOOD.opencood.utils.eval_utils")
 
 
 def voc_ap(rec, prec):
@@ -68,7 +71,7 @@ def caluclate_tp_fp(det_boxes, det_score, gt_boxes, result_stat, iou_thresh):
 
         # sort the prediction bounding box by score
         score_order_descend = np.argsort(-det_score)
-        det_score = det_score[score_order_descend] # from high to low
+        det_score = det_score[score_order_descend]  # from high to low
         det_polygon_list = list(common_utils.convert_format(det_boxes))
         gt_polygon_list = list(common_utils.convert_format(gt_boxes))
 
@@ -103,7 +106,7 @@ def calculate_ap(result_stat, iou, global_sort_detections):
     ----------
     result_stat : dict
         A dictionary contains fp, tp and gt number.
-        
+
     iou : float
         The threshold of iou.
 
@@ -121,13 +124,16 @@ def calculate_ap(result_stat, iou, global_sort_detections):
         sorted_index = np.argsort(-score)
         fp = fp[sorted_index].tolist()
         tp = tp[sorted_index].tolist()
-        
     else:
         fp = iou_5['fp']
         tp = iou_5['tp']
         assert len(fp) == len(tp)
 
     gt_total = iou_5['gt']
+
+    if gt_total == 0:
+        logger.warning("gt_total is 0")
+        return 0.0, [0], [0]
 
     cumsum = 0
     for idx, val in enumerate(fp):
@@ -167,10 +173,10 @@ def eval_final_results(result_stat, save_path, global_sort_detections):
                       'mpre_70': mpre_70,
                       'mrec_70': mrec_70,
                       })
-    
+
     output_file = 'eval.yaml' if not global_sort_detections else 'eval_global_sort.yaml'
     yaml_utils.save_yaml(dump_dict, os.path.join(save_path, output_file))
 
-    print('The Average Precision at IOU 0.3 is %.2f, '
-          'The Average Precision at IOU 0.5 is %.2f, '
-          'The Average Precision at IOU 0.7 is %.2f' % (ap_30, ap_50, ap_70))
+    logging.info('The Average Precision at IOU 0.3 is %.2f, '
+                 'The Average Precision at IOU 0.5 is %.2f, '
+                 'The Average Precision at IOU 0.7 is %.2f' % (ap_30, ap_50, ap_70))
