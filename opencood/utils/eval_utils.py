@@ -132,7 +132,7 @@ def calculate_ap(result_stat, iou, global_sort_detections):
     gt_total = iou_5['gt']
 
     if gt_total == 0:
-        logger.warning("gt_total is 0")
+        logger.warning("Variable gt_total is 0")
         return 0.0, [0], [0]
 
     cumsum = 0
