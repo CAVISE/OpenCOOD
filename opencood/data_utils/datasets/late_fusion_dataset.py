@@ -5,35 +5,36 @@
 """
 Dataset class for late fusion
 """
-import random
 import math
+import random
+import logging
 from collections import OrderedDict
 
 import numpy as np
 import torch
-from torch.utils.data import DataLoader
 
 import opencood.data_utils.datasets
 from opencood.data_utils.post_processor import build_postprocessor
 from opencood.data_utils.datasets import basedataset
 from opencood.data_utils.pre_processor import build_preprocessor
-from opencood.hypes_yaml.yaml_utils import load_yaml
 from opencood.utils import box_utils
 from opencood.utils.pcd_utils import \
     mask_points_by_range, mask_ego_points, shuffle_points, \
     downsample_lidar_minimum
 from opencood.utils.transformation_utils import x1_to_x2
 
+logger = logging.getLogger('cavise.OpenCOOD.opencood.data_utils.datasets.late_fusion_dataset')
 
+
+# TODO: Сделать по аналогии с Intermediate
 class LateFusionDataset(basedataset.BaseDataset):
     """
     This class is for intermediate fusion where each vehicle transmit the
     detection outputs to ego.
     """
-    def __init__(self, params, visualize, train=True):
+    def __init__(self, params, visualize, train=True, message_handler=None):
         super(LateFusionDataset, self).__init__(params, visualize, train)
-        self.pre_processor = build_preprocessor(params['preprocess'],
-                                                train)
+        self.pre_processor = build_preprocessor(params['preprocess'], train)
         self.post_processor = build_postprocessor(params['postprocess'], train)
 
     def __getitem__(self, idx):

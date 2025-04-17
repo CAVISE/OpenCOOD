@@ -8,6 +8,7 @@ Basedataset class for all kinds of fusion.
 
 import os
 import math
+import logging
 from collections import OrderedDict
 
 import torch
@@ -19,6 +20,8 @@ from opencood.data_utils.augmentor.data_augmentor import DataAugmentor
 from opencood.hypes_yaml.yaml_utils import load_yaml
 from opencood.utils.pcd_utils import downsample_lidar_minimum
 from opencood.utils.transformation_utils import x1_to_x2
+
+logger = logging.getLogger('cavise.OpenCOOD.opencood.data_utils.datasets.basedataset')
 
 
 class BaseDataset(Dataset):
@@ -74,7 +77,7 @@ class BaseDataset(Dataset):
             self.async_flag = params['wild_setting']['async']
             self.async_mode = \
                 'sim' if 'async_mode' not in params['wild_setting'] \
-                    else params['wild_setting']['async_mode']
+                else params['wild_setting']['async_mode']
             self.async_overhead = params['wild_setting']['async_overhead']
 
             # localization error
@@ -85,13 +88,13 @@ class BaseDataset(Dataset):
             # transmission data size
             self.data_size = \
                 params['wild_setting']['data_size'] \
-                    if 'data_size' in params['wild_setting'] else 0
+                if 'data_size' in params['wild_setting'] else 0
             self.transmission_speed = \
                 params['wild_setting']['transmission_speed'] \
-                    if 'transmission_speed' in params['wild_setting'] else 27
+                if 'transmission_speed' in params['wild_setting'] else 27
             self.backbone_delay = \
                 params['wild_setting']['backbone_delay'] \
-                    if 'backbone_delay' in params['wild_setting'] else 0
+                if 'backbone_delay' in params['wild_setting'] else 0
 
         else:
             self.async_flag = False
@@ -129,9 +132,7 @@ class BaseDataset(Dataset):
             self.scenario_database.update({i: OrderedDict()})
 
             # at least 1 cav should show up
-            cav_list = sorted([x for x in os.listdir(scenario_folder)
-                               if os.path.isdir(
-                    os.path.join(scenario_folder, x))])
+            cav_list = sorted([x for x in os.listdir(scenario_folder) if os.path.isdir(os.path.join(scenario_folder, x))])
             assert len(cav_list) > 0
 
             # roadside unit data's id is always negative, so here we want to
@@ -143,7 +144,8 @@ class BaseDataset(Dataset):
             # loop over all CAV data
             for (j, cav_id) in enumerate(cav_list):
                 if j > self.max_cav - 1:
-                    print('too many cavs')
+                    logger.warning(f'Too many CAVs and RSUs: {len(cav_list)}')
+                    logger.warning(f'Maximum is {self.max_cav}')
                     break
                 self.scenario_database[i][cav_id] = OrderedDict()
 
@@ -232,8 +234,7 @@ class BaseDataset(Dataset):
         timestamp_key = self.return_timestamp_key(scenario_database,
                                                   timestamp_index)
         # calculate distance to ego for each cav
-        ego_cav_content = \
-            self.calc_dist_to_ego(scenario_database, timestamp_key)
+        ego_cav_content = self.calc_dist_to_ego(scenario_database, timestamp_key)
 
         data = OrderedDict()
         # load files for all CAVs
@@ -242,8 +243,7 @@ class BaseDataset(Dataset):
             data[cav_id]['ego'] = cav_content['ego']
 
             # calculate delay for this vehicle
-            timestamp_delay = \
-                self.time_delay_calculation(cav_content['ego'])
+            timestamp_delay = self.time_delay_calculation(cav_content['ego'])
 
             if timestamp_index - timestamp_delay <= 0:
                 timestamp_delay = timestamp_index
@@ -323,20 +323,19 @@ class BaseDataset(Dataset):
         for cav_id, cav_content in scenario_database.items():
             if cav_content['ego']:
                 ego_cav_content = cav_content
-                ego_lidar_pose = \
-                    load_yaml(cav_content[timestamp_key]['yaml'])['lidar_pose']
+                ego_lidar_pose = load_yaml(cav_content[timestamp_key]['yaml'])['lidar_pose']
                 break
 
         assert ego_lidar_pose is not None
 
         # calculate the distance
         for cav_id, cav_content in scenario_database.items():
-            cur_lidar_pose = \
-                load_yaml(cav_content[timestamp_key]['yaml'])['lidar_pose']
-            distance = \
-                math.sqrt((cur_lidar_pose[0] -
-                           ego_lidar_pose[0]) ** 2 +
-                          (cur_lidar_pose[1] - ego_lidar_pose[1]) ** 2)
+            cur_lidar_pose = load_yaml(cav_content[timestamp_key]['yaml'])['lidar_pose']
+
+            dx = cur_lidar_pose[0] - ego_lidar_pose[0]
+            dy = cur_lidar_pose[1] - ego_lidar_pose[1]
+            distance = math.hypot(dx, dy)
+
             cav_content['distance_to_ego'] = distance
             scenario_database.update({cav_id: cav_content})
 
