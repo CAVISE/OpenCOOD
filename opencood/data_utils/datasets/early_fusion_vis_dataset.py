@@ -23,6 +23,7 @@ from opencood.utils.pcd_utils import \
 from opencood.utils.transformation_utils import x1_to_x2
 
 
+# TODO: Вообше не понятно зачем он нужен, вроде нигде не используется
 class EarlyFusionVisDataset(basedataset.BaseDataset):
     def __init__(self, params, visualize, train=True):
         super(EarlyFusionVisDataset, self).__init__(params, visualize, train)
