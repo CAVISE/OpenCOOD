@@ -167,9 +167,8 @@ def linset_assign_list(vis,
     """
     for j in range(len(lineset_list1)):
         index = j if j < len(lineset_list2) else -1
-        lineset_list1[j] = \
-            lineset_assign(lineset_list1[j],
-                                     lineset_list2[index])
+        if len(lineset_list2):
+            lineset_list1[j] = lineset_assign(lineset_list1[j], lineset_list2[index])
         if update_mode == 'add':
             vis.add_geometry(lineset_list1[j])
         else:
