@@ -17,13 +17,13 @@ import opencood.data_utils.post_processor as post_processor
 from opencood.utils import box_utils
 from opencood.data_utils.datasets import basedataset
 from opencood.data_utils.pre_processor import build_preprocessor
-from opencood.utils.pcd_utils import \
-    mask_points_by_range, mask_ego_points, shuffle_points
+from opencood.utils.pcd_utils import mask_points_by_range, mask_ego_points, shuffle_points
 from opencood.utils.transformation_utils import x1_to_x2
 from opencood.pcdet_utils.roiaware_pool3d.roiaware_pool3d_utils import points_in_boxes_cpu
 
 
 # TODO: У модели fpvrcnn_intermediate_fusion в этом датасете возникает проблема с весами
+# TODO: Проверить работу моделей с такми датасетом
 # они не правильно расположены
 # size mismatch for spconv_block.conv_out.0.weight: copying a param with shape torch.Size([3, 1, 1, 64, 64]) from checkpoint, the shape in current model is torch.Size([64, 3, 1, 1, 64])
 # Надо будет переобучить модель и обновить код
@@ -34,12 +34,52 @@ class IntermediateFusionDatasetV2(basedataset.BaseDataset):
     """
 
     def __init__(self, params, visualize, train=True, message_handler=None):
-        super(IntermediateFusionDatasetV2, self). \
-            __init__(params, visualize, train)
+        super(IntermediateFusionDatasetV2, self).__init__(params, visualize, train)
         self.pre_processor = build_preprocessor(params['preprocess'], train)
         self.post_processor = post_processor.build_postprocessor(params['postprocess'], train)
 
         self.message_handler = message_handler
+
+    def get_entity_item(self, idx):
+        base_data_dict = self.retrieve_base_data(idx, cur_ego_pose_flag=self.cur_ego_pose_flag)
+        _, ego_lidar_pose = self.__find_ego_vehicle(base_data_dict)
+
+        if self.message_handler is not None:
+            for cav_id, selected_cav_base in base_data_dict.items():
+                selected_cav_processed = self.get_item_single_car(selected_cav_base, ego_lidar_pose)
+
+                with self.message_handler.handle_opencda_message(cav_id, 'coperception') as msg:
+                    msg['object_ids'] = selected_cav_processed['object_ids']  # list
+
+                    msg['object_bbx_center'] = {}
+                    object_bbx_center_info = selected_cav_processed['object_bbx_center']  # numpy.ndarray to bytes
+                    msg['object_bbx_center']['data'] = object_bbx_center_info.tobytes()
+                    msg['object_bbx_center']['shape'] = object_bbx_center_info.shape
+                    msg['object_bbx_center']['dtype'] = str(object_bbx_center_info.dtype)
+
+                    msg['voxel_num_points'] = {}
+                    voxel_num_points_info = selected_cav_processed['processed_features']['voxel_num_points']  # numpy.ndarray to bytes
+                    msg['voxel_num_points']['data'] = voxel_num_points_info.tobytes()
+                    msg['voxel_num_points']['shape'] = voxel_num_points_info.shape
+                    msg['voxel_num_points']['dtype'] = str(voxel_num_points_info.dtype)
+
+                    msg['voxel_features'] = {}
+                    voxel_features_info = selected_cav_processed['processed_features']['voxel_features']  # numpy.ndarray to bytes
+                    msg['voxel_features']['data'] = voxel_features_info.tobytes()
+                    msg['voxel_features']['shape'] = voxel_features_info.shape
+                    msg['voxel_features']['dtype'] = str(voxel_features_info.dtype)
+
+                    msg['voxel_coords'] = {}
+                    voxel_coords_info = selected_cav_processed['processed_features']['voxel_coords']  # numpy.ndarray to bytes
+                    msg['voxel_coords']['data'] = voxel_coords_info.tobytes()
+                    msg['voxel_coords']['shape'] = voxel_coords_info.shape
+                    msg['voxel_coords']['dtype'] = str(voxel_coords_info.dtype)
+
+                    msg['projected_lidar'] = {}
+                    projected_lidar_info = selected_cav_processed['projected_lidar']   # numpy.ndarray to bytes
+                    msg['projected_lidar']['data'] = projected_lidar_info.tobytes()
+                    msg['projected_lidar']['shape'] = projected_lidar_info.shape
+                    msg['projected_lidar']['dtype'] = str(projected_lidar_info.dtype)
 
     def __find_ego_vehicle(self, base_data_dict):
         ego_id = -1
@@ -156,14 +196,12 @@ class IntermediateFusionDatasetV2(basedataset.BaseDataset):
             data = self.__process_without_messages(ego_lidar_pose, base_data_dict)
 
         # exclude all repetitive objects
-        unique_indices = \
-            [data['object_id_stack'].index(x) for x in set(data['object_id_stack'])]
+        unique_indices = [data['object_id_stack'].index(x) for x in set(data['object_id_stack'])]
         object_stack_all = np.vstack(data['object_id_stack'])
         object_stack_all = object_stack_all[unique_indices]
 
         # make sure bounding boxes across all frames have the same number
-        object_bbx_center = \
-            np.zeros((self.params['postprocess']['max_num'], 7))
+        object_bbx_center = np.zeros((self.params['postprocess']['max_num'], 7))
         mask = np.zeros(self.params['postprocess']['max_num'])
         object_bbx_center[:object_stack_all.shape[0], :] = object_stack_all
         mask[:object_stack_all.shape[0]] = 1
@@ -184,31 +222,23 @@ class IntermediateFusionDatasetV2(basedataset.BaseDataset):
         object_stack_filtered = []
         label_dict_no_coop = []
         for boxes, points in zip(data['object_stack'], data['projected_lidar_stack']):
-            point_indices = points_in_boxes_cpu(points[:, :3], boxes[:,
-                                                               [0, 1, 2, 5, 4,
-                                                                3, 6]])
+            point_indices = points_in_boxes_cpu(points[:, :3], boxes[:, [0, 1, 2, 5, 4, 3, 6]])
             cur_mask = point_indices.sum(axis=1) > 0
             if cur_mask.sum() == 0:
                 label_dict_no_coop.append({
-                    'pos_equal_one': np.zeros((*anchor_box.shape[:2],
-                                               self.post_processor.anchor_num)),
-                    'neg_equal_one': np.ones((*anchor_box.shape[:2],
-                                              self.post_processor.anchor_num)),
-                    'targets': np.zeros((*anchor_box.shape[:2],
-                                         self.post_processor.anchor_num * 7))
+                    'pos_equal_one': np.zeros((*anchor_box.shape[:2], self.post_processor.anchor_num)),
+                    'neg_equal_one': np.ones((*anchor_box.shape[:2], self.post_processor.anchor_num)),
+                    'targets': np.zeros((*anchor_box.shape[:2], self.post_processor.anchor_num * 7))
                 })
                 continue
             object_stack_filtered.append(boxes[cur_mask])
-            bbx_center = \
-                np.zeros((self.params['postprocess']['max_num'], 7))
+            bbx_center = np.zeros((self.params['postprocess']['max_num'], 7))
             bbx_mask = np.zeros(self.params['postprocess']['max_num'])
             bbx_center[:boxes[cur_mask].shape[0], :] = boxes[cur_mask]
             bbx_mask[:boxes[cur_mask].shape[0]] = 1
-            label_dict_no_coop.append(
-                self.post_processor.generate_label(gt_box_center=bbx_center,  # hwl
-                                                   anchors=anchor_box,
-                                                   mask=bbx_mask)
-            )
+            label_dict_no_coop.append(self.post_processor.generate_label(gt_box_center=bbx_center,  # hwl
+                                                                         anchors=anchor_box,
+                                                                         mask=bbx_mask))
         label_dict = {
             'stage1': label_dict_no_coop,
             'stage2': label_dict
@@ -244,14 +274,10 @@ class IntermediateFusionDatasetV2(basedataset.BaseDataset):
         selected_cav_processed = {}
 
         # calculate the transformation matrix
-        transformation_matrix = \
-            x1_to_x2(selected_cav_base['params']['lidar_pose'],
-                     ego_pose)
+        transformation_matrix = x1_to_x2(selected_cav_base['params']['lidar_pose'], ego_pose)
 
         # retrieve objects under ego coordinates
-        object_bbx_center, object_bbx_mask, object_ids = \
-            self.post_processor.generate_object_center([selected_cav_base],
-                                                       ego_pose)
+        object_bbx_center, object_bbx_mask, object_ids = self.post_processor.generate_object_center([selected_cav_base], ego_pose)
 
         # filter lidar
         lidar_np = selected_cav_base['lidar_np']
@@ -259,12 +285,8 @@ class IntermediateFusionDatasetV2(basedataset.BaseDataset):
         # remove points that hit itself
         lidar_np = mask_ego_points(lidar_np)
         # project the lidar to ego space
-        lidar_np[:, :3] = \
-            box_utils.project_points_by_matrix_torch(lidar_np[:, :3],
-                                                     transformation_matrix)
-        lidar_np = mask_points_by_range(lidar_np,
-                                        self.params['preprocess'][
-                                            'cav_lidar_range'])
+        lidar_np[:, :3] = box_utils.project_points_by_matrix_torch(lidar_np[:, :3], transformation_matrix)
+        lidar_np = mask_points_by_range(lidar_np, self.params['preprocess']['cav_lidar_range'])
         processed_lidar = self.pre_processor.preprocess(lidar_np)
 
         selected_cav_processed.update(
@@ -324,10 +346,7 @@ class IntermediateFusionDatasetV2(basedataset.BaseDataset):
         # added by yys, fpvrcnn needs anchors for
         # first stage proposal generation
         if batch[0]['ego']['anchor_box'] is not None:
-            output_dict['ego'].update({'anchor_box':
-                torch.from_numpy(np.array(
-                    batch[0]['ego'][
-                        'anchor_box']))})
+            output_dict['ego'].update({'anchor_box': torch.from_numpy(np.array(batch[0]['ego']['anchor_box']))})
 
         for i in range(len(batch)):
             ego_dict = batch[i]['ego']
@@ -349,20 +368,17 @@ class IntermediateFusionDatasetV2(basedataset.BaseDataset):
         # example: {'voxel_features':[np.array([1,2,3]]),
         # np.array([3,5,6]), ...]}
         merged_feature_dict = self.merge_features_to_dict(processed_lidar_list)
-        processed_lidar_torch_dict = \
-            self.pre_processor.collate_batch(merged_feature_dict)
+        processed_lidar_torch_dict = self.pre_processor.collate_batch(merged_feature_dict)
         # [2, 3, 4, ..., M], M <= 5
         record_len = torch.from_numpy(np.array(record_len, dtype=int))
-        label_torch_dict = \
-            self.post_processor.collate_batch(label_dict_list)
+        label_torch_dict = self.post_processor.collate_batch(label_dict_list)
         label_dict_no_coop_list_ = [label_dict for label_list in
                                     label_dict_no_coop_list for label_dict in
                                     label_list]
         for i in range(len(label_dict_no_coop_list_)):
             if isinstance(label_dict_no_coop_list_[i], list):
                 print('debug')
-        label_no_coop_torch_dict = \
-            self.post_processor.collate_batch(label_dict_no_coop_list_)
+        label_no_coop_torch_dict = self.post_processor.collate_batch(label_dict_no_coop_list_)
         # object id is only used during inference, where batch size is 1.
         # so here we only get the first element.
         output_dict['ego'].update({'object_bbx_center': object_bbx_center,
@@ -379,8 +395,7 @@ class IntermediateFusionDatasetV2(basedataset.BaseDataset):
         for b in range(len(batch)):
             for points in origin_lidar[b]:
                 assert len(points) != 0
-                coor_pad = np.pad(points, ((0, 0), (1, 0)),
-                                  mode="constant", constant_values=idx)
+                coor_pad = np.pad(points, ((0, 0), (1, 0)), mode="constant", constant_values=idx)
                 coords.append(coor_pad)
                 idx += 1
         origin_lidar = np.concatenate(coords, axis=0)
@@ -396,10 +411,7 @@ class IntermediateFusionDatasetV2(basedataset.BaseDataset):
 
         # check if anchor box in the batch
         if batch[0]['ego']['anchor_box'] is not None:
-            output_dict['ego'].update({'anchor_box':
-                torch.from_numpy(np.array(
-                    batch[0]['ego'][
-                        'anchor_box']))})
+            output_dict['ego'].update({'anchor_box': torch.from_numpy(np.array(batch[0]['ego']['anchor_box']))})
 
         # save the transformation matrix (4, 4) to ego vehicle
         transformation_matrix_torch = torch.from_numpy(np.identity(4)).float()
@@ -426,8 +438,7 @@ class IntermediateFusionDatasetV2(basedataset.BaseDataset):
         gt_box_tensor : torch.Tensor
             The tensor of gt bounding box.
         """
-        pred_box_tensor, pred_score = \
-            self.post_processor.post_process(data_dict, output_dict)
+        pred_box_tensor, pred_score = self.post_processor.post_process(data_dict, output_dict)
         gt_box_tensor = self.post_processor.generate_gt_bbx(data_dict)
 
         return pred_box_tensor, pred_score, gt_box_tensor

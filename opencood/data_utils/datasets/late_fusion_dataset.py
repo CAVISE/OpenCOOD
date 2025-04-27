@@ -18,15 +18,12 @@ from opencood.data_utils.post_processor import build_postprocessor
 from opencood.data_utils.datasets import basedataset
 from opencood.data_utils.pre_processor import build_preprocessor
 from opencood.utils import box_utils
-from opencood.utils.pcd_utils import \
-    mask_points_by_range, mask_ego_points, shuffle_points, \
-    downsample_lidar_minimum
+from opencood.utils.pcd_utils import mask_points_by_range, mask_ego_points, shuffle_points, downsample_lidar_minimum
 from opencood.utils.transformation_utils import x1_to_x2
 
 logger = logging.getLogger('cavise.OpenCOOD.opencood.data_utils.datasets.late_fusion_dataset')
 
 
-# TODO: Сделать по аналогии с Intermediate
 class LateFusionDataset(basedataset.BaseDataset):
     """
     This class is for intermediate fusion where each vehicle transmit the
@@ -37,6 +34,8 @@ class LateFusionDataset(basedataset.BaseDataset):
         self.pre_processor = build_preprocessor(params['preprocess'], train)
         self.post_processor = build_postprocessor(params['postprocess'], train)
 
+        self.message_handler = message_handler
+
     def __getitem__(self, idx):
         base_data_dict = self.retrieve_base_data(idx)
         if self.train:
@@ -45,6 +44,219 @@ class LateFusionDataset(basedataset.BaseDataset):
             reformat_data_dict = self.get_item_test(base_data_dict)
 
         return reformat_data_dict
+
+    def get_entity_item(self, idx):
+        base_data_dict = self.retrieve_base_data(idx)
+
+        if self.message_handler is not None:
+            for cav_id, selected_cav_base in base_data_dict.items():
+                selected_cav_processed = self.get_item_single_car(selected_cav_base)
+
+                with self.message_handler.handle_opencda_message(cav_id, 'coperception') as msg:
+                    msg['object_ids'] = selected_cav_processed['object_ids']  # list
+                    msg['lidar_pose'] = selected_cav_base['params']['lidar_pose']  # list
+
+                    # object_bbx_center
+                    bbx_info = selected_cav_processed['object_bbx_center']
+                    msg['object_bbx_center'] = {
+                        'data': bbx_info.tobytes(),
+                        'shape': bbx_info.shape,
+                        'dtype': str(bbx_info.dtype)
+                    }
+
+                    # object_bbx_mask
+                    mask_info = selected_cav_processed['object_bbx_mask']
+                    msg['object_bbx_mask'] = {
+                        'data': mask_info.tobytes(),
+                        'shape': mask_info.shape,
+                        'dtype': str(mask_info.dtype)
+                    }
+
+                    # anchor_box
+                    anchor_info = selected_cav_processed['anchor_box']
+                    msg['anchor_box'] = {
+                        'data': anchor_info.tobytes(),
+                        'shape': anchor_info.shape,
+                        'dtype': str(anchor_info.dtype)
+                    }
+
+                    # label_dict.pos_equal_one
+                    pos_info = selected_cav_processed['label_dict']['pos_equal_one']
+                    msg['pos_equal_one'] = {
+                        'data': pos_info.tobytes(),
+                        'shape': pos_info.shape,
+                        'dtype': str(pos_info.dtype)
+                    }
+
+                    # label_dict.neg_equal_one
+                    neg_info = selected_cav_processed['label_dict']['neg_equal_one']
+                    msg['neg_equal_one'] = {
+                        'data': neg_info.tobytes(),
+                        'shape': neg_info.shape,
+                        'dtype': str(neg_info.dtype)
+                    }
+
+                    # label_dict.targets
+                    targets_info = selected_cav_processed['label_dict']['targets']
+                    msg['targets'] = {
+                        'data': targets_info.tobytes(),
+                        'shape': targets_info.shape,
+                        'dtype': str(targets_info.dtype)
+                    }
+
+                    # processed_lidar.voxel_features
+                    voxel_features_info = selected_cav_processed['processed_lidar']['voxel_features']
+                    msg['voxel_features'] = {
+                        'data': voxel_features_info.tobytes(),
+                        'shape': voxel_features_info.shape,
+                        'dtype': str(voxel_features_info.dtype)
+                    }
+
+                    # processed_lidar.voxel_coords
+                    voxel_coords_info = selected_cav_processed['processed_lidar']['voxel_coords']
+                    msg['voxel_coords'] = {
+                        'data': voxel_coords_info.tobytes(),
+                        'shape': voxel_coords_info.shape,
+                        'dtype': str(voxel_coords_info.dtype)
+                    }
+
+                    # processed_lidar.voxel_num_points
+                    voxel_num_points_info = selected_cav_processed['processed_lidar']['voxel_num_points']
+                    msg['voxel_num_points'] = {
+                        'data': voxel_num_points_info.tobytes(),
+                        'shape': voxel_num_points_info.shape,
+                        'dtype': str(voxel_num_points_info.dtype)
+                    }
+
+                    origin_lidar_info = selected_cav_processed['origin_lidar']
+                    msg['origin_lidar'] = {
+                        'data': origin_lidar_info.tobytes(),
+                        'shape': origin_lidar_info.shape,
+                        'dtype': str(origin_lidar_info.dtype)
+                    }
+
+    def __find_ego_vehicle(self, base_data_dict):
+        ego_id = -1
+        ego_lidar_pose = []
+
+        # first find the ego vehicle's lidar pose
+        for cav_id, cav_content in base_data_dict.items():
+            if cav_content['ego']:
+                ego_id = cav_id
+                ego_lidar_pose = cav_content['params']['lidar_pose']
+                break
+
+        assert cav_id == list(base_data_dict.keys())[0], "The first element in the OrderedDict must be ego"
+        assert ego_id != -1
+
+        return ego_id, ego_lidar_pose
+
+    def __process_with_messages(self, ego_id, ego_lidar_pose, base_data_dict):
+        processed_data_dict = OrderedDict()
+
+        object_bbx_center = []
+        object_bbx_mask = []
+        object_ids = []
+        anchor_box = []
+        pos_equal_one = []
+        neg_equal_one = []
+        targets = []
+        voxel_features = []
+        voxel_coords = []
+        voxel_num_points = []
+        transformation_matrix = []
+        origin_lidar = [] if self.visualize else None
+
+        ego_cav_base = base_data_dict.get(ego_id)
+        ego_cav_processed = self.get_item_single_car(ego_cav_base)
+
+        object_bbx_center.append(ego_cav_processed['object_bbx_center'])
+        object_bbx_mask.append(ego_cav_processed['object_bbx_mask'])
+        object_ids += ego_cav_processed['object_ids']
+        anchor_box.append(ego_cav_processed['anchor_box'])
+        pos_equal_one.append(ego_cav_processed['label_dict']['pos_equal_one'])
+        neg_equal_one.append(ego_cav_processed['label_dict']['neg_equal_one'])
+        targets.append(ego_cav_processed['label_dict']['targets'])
+        voxel_features.append(ego_cav_processed['processed_lidar']['voxel_features'])
+        voxel_coords.append(ego_cav_processed['processed_lidar']['voxel_coords'])
+        voxel_num_points.append(ego_cav_processed['processed_lidar']['voxel_num_points'])
+
+        transformation_matrix_info = x1_to_x2(ego_lidar_pose, ego_lidar_pose)
+        ego_cav_processed['transformation_matrix'] = transformation_matrix_info
+        transformation_matrix.append(transformation_matrix_info)
+
+        if self.visualize:
+            origin_lidar.append(ego_cav_processed['origin_lidar'])
+
+        processed_data_dict.update({"ego": ego_cav_processed})
+
+        if ego_id in self.message_handler.current_message_artery:
+            for cav_id, _ in base_data_dict.items():
+                if cav_id in self.message_handler.current_message_artery[ego_id]:
+                    with self.message_handler.handle_artery_message(ego_id, cav_id, 'coperception') as msg:
+                        object_ids += msg['object_ids']
+                        cav_lidar_pose = msg['lidar_pose']
+
+                        def unpack(msg_key):
+                            array = np.frombuffer(msg[msg_key]['data'], np.dtype(msg[msg_key]['dtype']))
+                            return array.reshape(msg[msg_key]['shape'])
+
+                        object_bbx_center.append(unpack('object_bbx_center'))
+                        object_bbx_mask.append(unpack('object_bbx_mask'))
+                        anchor_box.append(unpack('anchor_box'))
+                        pos_equal_one.append(unpack('pos_equal_one'))
+                        neg_equal_one.append(unpack('neg_equal_one'))
+                        targets.append(unpack('targets'))
+                        voxel_features.append(unpack('voxel_features'))
+                        voxel_coords.append(unpack('voxel_coords'))
+                        voxel_num_points.append(unpack('voxel_num_points'))
+
+                        transformation_matrix_info = x1_to_x2(cav_lidar_pose, ego_lidar_pose)
+                        transformation_matrix.append(transformation_matrix_info)
+
+                        if self.visualize:
+                            origin_lidar.append(unpack('origin_lidar'))
+
+                    update_cav = "ego" if cav_id == ego_id else cav_id
+
+                    selected_cav_processed = {'object_bbx_center': object_bbx_center,
+                                              'object_bbx_mask': object_bbx_mask,
+                                              'object_ids': object_ids,
+                                              'anchor_box': anchor_box,
+                                              'pos_equal_one': pos_equal_one,
+                                              'neg_equal_one': neg_equal_one,
+                                              'targets': targets,
+                                              'voxel_features': voxel_features,
+                                              'voxel_coords': voxel_coords,
+                                              'voxel_num_points': voxel_num_points,
+                                              'transformation_matrix': transformation_matrix,
+                                              'origin_lidar': origin_lidar or []}
+
+                    processed_data_dict.update({update_cav: selected_cav_processed})
+
+        return processed_data_dict
+
+    def __process_without_messages(self, ego_id, ego_lidar_pose, base_data_dict):
+        processed_data_dict = OrderedDict()
+
+        for cav_id, selected_cav_base in base_data_dict.items():
+            dx = selected_cav_base['params']['lidar_pose'][0] - ego_lidar_pose[0]
+            dy = selected_cav_base['params']['lidar_pose'][1] - ego_lidar_pose[1]
+            distance = math.hypot(dx, dy)
+
+            if distance > opencood.data_utils.datasets.COM_RANGE:
+                continue
+
+            # find the transformation matrix from current cav to ego.
+            cav_lidar_pose = selected_cav_base['params']['lidar_pose']
+            transformation_matrix = x1_to_x2(cav_lidar_pose, ego_lidar_pose)
+
+            selected_cav_processed = self.get_item_single_car(selected_cav_base)
+            selected_cav_processed.update({'transformation_matrix': transformation_matrix})
+            update_cav = "ego" if cav_id == ego_id else cav_id
+            processed_data_dict.update({update_cav: selected_cav_processed})
+
+        return processed_data_dict
 
     def get_item_single_car(self, selected_cav_base):
         """
@@ -65,21 +277,14 @@ class LateFusionDataset(basedataset.BaseDataset):
         # filter lidar
         lidar_np = selected_cav_base['lidar_np']
         lidar_np = shuffle_points(lidar_np)
-        lidar_np = mask_points_by_range(lidar_np,
-                                        self.params['preprocess'][
-                                            'cav_lidar_range'])
+        lidar_np = mask_points_by_range(lidar_np, self.params['preprocess']['cav_lidar_range'])
         # remove points that hit ego vehicle
         lidar_np = mask_ego_points(lidar_np)
 
         # generate the bounding box(n, 7) under the cav's space
-        object_bbx_center, object_bbx_mask, object_ids = \
-            self.post_processor.generate_object_center([selected_cav_base],
-                                                       selected_cav_base[
-                                                           'params'][
-                                                           'lidar_pose'])
+        object_bbx_center, object_bbx_mask, object_ids = self.post_processor.generate_object_center([selected_cav_base], selected_cav_base['params']['lidar_pose'])
         # data augmentation
-        lidar_np, object_bbx_center, object_bbx_mask = \
-            self.augment(lidar_np, object_bbx_center, object_bbx_mask)
+        lidar_np, object_bbx_center, object_bbx_mask = self.augment(lidar_np, object_bbx_center, object_bbx_mask)
 
         if self.visualize:
             selected_cav_processed.update({'origin_lidar': lidar_np})
@@ -97,11 +302,9 @@ class LateFusionDataset(basedataset.BaseDataset):
                                        'object_ids': object_ids})
 
         # generate targets label
-        label_dict = \
-            self.post_processor.generate_label(
-                gt_box_center=object_bbx_center,
-                anchors=anchor_box,
-                mask=object_bbx_mask)
+        label_dict = self.post_processor.generate_label(gt_box_center=object_bbx_center,
+                                                        anchors=anchor_box,
+                                                        mask=object_bbx_mask)
         selected_cav_processed.update({'label_dict': label_dict})
 
         return selected_cav_processed
@@ -111,11 +314,9 @@ class LateFusionDataset(basedataset.BaseDataset):
 
         # during training, we return a random cav's data
         if not self.visualize:
-            selected_cav_id, selected_cav_base = \
-                random.choice(list(base_data_dict.items()))
+            selected_cav_id, selected_cav_base = random.choice(list(base_data_dict.items()))
         else:
-            selected_cav_id, selected_cav_base = \
-                list(base_data_dict.items())[0]
+            selected_cav_id, selected_cav_base = list(base_data_dict.items())[0]
 
         selected_cav_processed = self.get_item_single_car(selected_cav_base)
         processed_data_dict.update({'ego': selected_cav_processed})
@@ -123,41 +324,15 @@ class LateFusionDataset(basedataset.BaseDataset):
         return processed_data_dict
 
     def get_item_test(self, base_data_dict):
-        processed_data_dict = OrderedDict()
         ego_id = -1
         ego_lidar_pose = []
 
-        # first find the ego vehicle's lidar pose
-        for cav_id, cav_content in base_data_dict.items():
-            if cav_content['ego']:
-                ego_id = cav_id
-                ego_lidar_pose = cav_content['params']['lidar_pose']
-                break
+        ego_id, ego_lidar_pose = self.__find_ego_vehicle(base_data_dict)
 
-        assert ego_id != -1
-        assert len(ego_lidar_pose) > 0
-
-        # loop over all CAVs to process information
-        for cav_id, selected_cav_base in base_data_dict.items():
-            distance = \
-                math.sqrt((selected_cav_base['params']['lidar_pose'][0] -
-                           ego_lidar_pose[0])**2 + (
-                                      selected_cav_base['params'][
-                                          'lidar_pose'][1] - ego_lidar_pose[
-                                          1])**2)
-            if distance > opencood.data_utils.datasets.COM_RANGE:
-                continue
-
-            # find the transformation matrix from current cav to ego.
-            cav_lidar_pose = selected_cav_base['params']['lidar_pose']
-            transformation_matrix = x1_to_x2(cav_lidar_pose, ego_lidar_pose)
-
-            selected_cav_processed = \
-                self.get_item_single_car(selected_cav_base)
-            selected_cav_processed.update({'transformation_matrix':
-                                               transformation_matrix})
-            update_cav = "ego" if cav_id == ego_id else cav_id
-            processed_data_dict.update({update_cav: selected_cav_processed})
+        if self.message_handler is not None:
+            processed_data_dict = self.__process_with_messages(ego_id, ego_lidar_pose, base_data_dict)
+        else:
+            processed_data_dict = self.__process_without_messages(ego_id, ego_lidar_pose, base_data_dict)
 
         return processed_data_dict
 
@@ -190,42 +365,29 @@ class LateFusionDataset(basedataset.BaseDataset):
         for cav_id, cav_content in batch.items():
             output_dict.update({cav_id: {}})
             # shape: (1, max_num, 7)
-            object_bbx_center = \
-                torch.from_numpy(np.array([cav_content['object_bbx_center']]))
-            object_bbx_mask = \
-                torch.from_numpy(np.array([cav_content['object_bbx_mask']]))
+            object_bbx_center = torch.from_numpy(np.array([cav_content['object_bbx_center']]))
+            object_bbx_mask = torch.from_numpy(np.array([cav_content['object_bbx_mask']]))
             object_ids = cav_content['object_ids']
 
             # the anchor box is the same for all bounding boxes usually, thus
             # we don't need the batch dimension.
             if cav_content['anchor_box'] is not None:
-                output_dict[cav_id].update({'anchor_box':
-                    torch.from_numpy(np.array(
-                        cav_content[
-                            'anchor_box']))})
+                output_dict[cav_id].update({'anchor_box': torch.from_numpy(np.array(cav_content['anchor_box']))})
             if self.visualize:
                 transformation_matrix = cav_content['transformation_matrix']
                 origin_lidar = [cav_content['origin_lidar']]
 
                 projected_lidar = cav_content['origin_lidar']
-                projected_lidar[:, :3] = \
-                    box_utils.project_points_by_matrix_torch(
-                        projected_lidar[:, :3],
-                        transformation_matrix)
+                projected_lidar[:, :3] = box_utils.project_points_by_matrix_torch(projected_lidar[:, :3], transformation_matrix)
                 projected_lidar_list.append(projected_lidar)
 
             # processed lidar dictionary
-            processed_lidar_torch_dict = \
-                self.pre_processor.collate_batch(
-                    [cav_content['processed_lidar']])
+            processed_lidar_torch_dict = self.pre_processor.collate_batch([cav_content['processed_lidar']])
             # label dictionary
-            label_torch_dict = \
-                self.post_processor.collate_batch([cav_content['label_dict']])
+            label_torch_dict = self.post_processor.collate_batch([cav_content['label_dict']])
 
             # save the transformation matrix (4, 4) to ego vehicle
-            transformation_matrix_torch = \
-                torch.from_numpy(
-                    np.array(cav_content['transformation_matrix'])).float()
+            transformation_matrix_torch = torch.from_numpy(np.array(cav_content['transformation_matrix'])).float()
 
             output_dict[cav_id].update({'object_bbx_center': object_bbx_center,
                                         'object_bbx_mask': object_bbx_mask,
@@ -235,15 +397,12 @@ class LateFusionDataset(basedataset.BaseDataset):
                                         'transformation_matrix': transformation_matrix_torch})
 
             if self.visualize:
-                origin_lidar = \
-                    np.array(
-                        downsample_lidar_minimum(pcd_np_list=origin_lidar))
+                origin_lidar = np.array(downsample_lidar_minimum(pcd_np_list=origin_lidar))
                 origin_lidar = torch.from_numpy(origin_lidar)
                 output_dict[cav_id].update({'origin_lidar': origin_lidar})
 
         if self.visualize:
-            projected_lidar_stack = torch.from_numpy(
-                np.vstack(projected_lidar_list))
+            projected_lidar_stack = torch.from_numpy(np.vstack(projected_lidar_list))
             output_dict['ego'].update({'origin_lidar': projected_lidar_stack})
 
         return output_dict
@@ -267,8 +426,7 @@ class LateFusionDataset(basedataset.BaseDataset):
         gt_box_tensor : torch.Tensor
             The tensor of gt bounding box.
         """
-        pred_box_tensor, pred_score = \
-            self.post_processor.post_process(data_dict, output_dict)
+        pred_box_tensor, pred_score = self.post_processor.post_process(data_dict, output_dict)
         gt_box_tensor = self.post_processor.generate_gt_bbx(data_dict)
 
         return pred_box_tensor, pred_score, gt_box_tensor
