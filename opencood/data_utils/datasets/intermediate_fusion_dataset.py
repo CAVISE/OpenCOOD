@@ -17,10 +17,7 @@ import opencood.data_utils.post_processor as post_processor
 from opencood.utils import box_utils
 from opencood.data_utils.datasets import basedataset
 from opencood.data_utils.pre_processor import build_preprocessor
-from opencood.utils.pcd_utils import \
-    mask_points_by_range, mask_ego_points, shuffle_points, \
-    downsample_lidar_minimum
-from opencood.utils.transformation_utils import x1_to_x2
+from opencood.utils.pcd_utils import mask_points_by_range, mask_ego_points, shuffle_points, downsample_lidar_minimum
 
 logger = logging.getLogger('cavise.OpenCOOD.opencood.data_utils.datasets.intermediate_fusion_dataset')
 
@@ -31,8 +28,7 @@ class IntermediateFusionDataset(basedataset.BaseDataset):
     deep features to ego.
     """
     def __init__(self, params, visualize, train=True, message_handler=None):
-        super(IntermediateFusionDataset, self). \
-            __init__(params, visualize, train)
+        super(IntermediateFusionDataset, self).__init__(params, visualize, train)
 
         # if project first, cav's lidar will first be projected to
         # the ego's coordinate frame. otherwise, the feature will be
@@ -43,9 +39,10 @@ class IntermediateFusionDataset(basedataset.BaseDataset):
 
         # whether there is a time delay between the time that cav project
         # lidar to ego and the ego receive the delivered feature
-        self.cur_ego_pose_flag = True if 'cur_ego_pose_flag' not in \
-            params['fusion']['args'] else \
-            params['fusion']['args']['cur_ego_pose_flag']
+        if 'cur_ego_pose_flag' in params['fusion']['args']:
+            self.cur_ego_pose_flag = params['fusion']['args']['cur_ego_pose_flag']
+        else:
+            self.cur_ego_pose_flag = True
 
         self.pre_processor = build_preprocessor(params['preprocess'], train)
         self.post_processor = post_processor.build_postprocessor(params['postprocess'], train)
@@ -63,44 +60,57 @@ class IntermediateFusionDataset(basedataset.BaseDataset):
                 with self.message_handler.handle_opencda_message(cav_id, 'coperception') as msg:
                     msg['infra'] = 1 if int(cav_id) < 0 else 0  # int
                     msg['velocity'] = selected_cav_processed['velocity']  # float
-                    msg['time_delay'] = float(selected_cav_base['time_delay'])    # float
+                    msg['time_delay'] = float(selected_cav_base['time_delay'])  # float
                     msg['object_ids'] = selected_cav_processed['object_ids']  # list
 
-                    object_bbx_center_info = selected_cav_processed['object_bbx_center']  # numpy.ndarray to bytes
-                    msg['object_bbx_center']['data'] = object_bbx_center_info.tobytes()
-                    msg['object_bbx_center']['shape'] = object_bbx_center_info.shape
-                    msg['object_bbx_center']['dtype'] = str(object_bbx_center_info.dtype)
+                    # object_bbx_center
+                    object_bbx_center_info = selected_cav_processed['object_bbx_center']
+                    msg['object_bbx_center'] = {
+                        'data': object_bbx_center_info.tobytes(),
+                        'shape': object_bbx_center_info.shape,
+                        'dtype': str(object_bbx_center_info.dtype)
+                    }
 
-                    msg['spatial_correction_matrix'] = {}
-                    spatial_correction_matrix_info = selected_cav_base['params']['spatial_correction_matrix']  # numpy.ndarray to bytes
-                    msg['spatial_correction_matrix']['shape'] = spatial_correction_matrix_info.shape
-                    msg['spatial_correction_matrix']['data'] = spatial_correction_matrix_info.tobytes()
-                    msg['spatial_correction_matrix']['dtype'] = str(spatial_correction_matrix_info.dtype)
+                    # spatial_correction_matrix
+                    spatial_correction_matrix_info = selected_cav_base['params']['spatial_correction_matrix']
+                    msg['spatial_correction_matrix'] = {
+                        'data': spatial_correction_matrix_info.tobytes(),
+                        'shape': spatial_correction_matrix_info.shape,
+                        'dtype': str(spatial_correction_matrix_info.dtype)
+                    }
 
-                    msg['voxel_num_points'] = {}
-                    voxel_num_points_info = selected_cav_processed['processed_features']['voxel_num_points']  # numpy.ndarray to bytes
-                    msg['voxel_num_points']['data'] = voxel_num_points_info.tobytes()
-                    msg['voxel_num_points']['shape'] = voxel_num_points_info.shape
-                    msg['voxel_num_points']['dtype'] = str(voxel_num_points_info.dtype)
+                    # voxel_num_points
+                    voxel_num_points_info = selected_cav_processed['processed_features']['voxel_num_points']
+                    msg['voxel_num_points'] = {
+                        'data': voxel_num_points_info.tobytes(),
+                        'shape': voxel_num_points_info.shape,
+                        'dtype': str(voxel_num_points_info.dtype)
+                    }
 
-                    msg['voxel_features'] = {}
-                    voxel_features_info = selected_cav_processed['processed_features']['voxel_features']  # numpy.ndarray to bytes
-                    msg['voxel_features']['data'] = voxel_features_info.tobytes()
-                    msg['voxel_features']['shape'] = voxel_features_info.shape
-                    msg['voxel_features']['dtype'] = str(voxel_features_info.dtype)
+                    # voxel_features
+                    voxel_features_info = selected_cav_processed['processed_features']['voxel_features']
+                    msg['voxel_features'] = {
+                        'data': voxel_features_info.tobytes(),
+                        'shape': voxel_features_info.shape,
+                        'dtype': str(voxel_features_info.dtype)
+                    }
 
-                    msg['voxel_coords'] = {}
-                    voxel_coords_info = selected_cav_processed['processed_features']['voxel_coords']  # numpy.ndarray to bytes
-                    msg['voxel_coords']['data'] = voxel_coords_info.tobytes()
-                    msg['voxel_coords']['shape'] = voxel_coords_info.shape
-                    msg['voxel_coords']['dtype'] = str(voxel_coords_info.dtype)
+                    # voxel_coords
+                    voxel_coords_info = selected_cav_processed['processed_features']['voxel_coords']
+                    msg['voxel_coords'] = {
+                        'data': voxel_coords_info.tobytes(),
+                        'shape': voxel_coords_info.shape,
+                        'dtype': str(voxel_coords_info.dtype)
+                    }
 
                     if self.visualize:
-                        msg['projected_lidar'] = {}
-                        projected_lidar_info = selected_cav_processed['projected_lidar']   # numpy.ndarray to bytes
-                        msg['projected_lidar']['data'] = projected_lidar_info.tobytes()
-                        msg['projected_lidar']['shape'] = projected_lidar_info.shape
-                        msg['projected_lidar']['dtype'] = str(projected_lidar_info.dtype)
+                        # projected_lidar
+                        projected_lidar_info = selected_cav_processed['projected_lidar']
+                        msg['projected_lidar'] = {
+                            'data': projected_lidar_info.tobytes(),
+                            'shape': projected_lidar_info.shape,
+                            'dtype': str(projected_lidar_info.dtype)
+                        }
                     else:
                         msg['projected_lidar_raw'] = None
 
@@ -326,9 +336,7 @@ class IntermediateFusionDataset(basedataset.BaseDataset):
         transformation_matrix = selected_cav_base['params']['transformation_matrix']
 
         # retrieve objects under ego coordinates
-        object_bbx_center, object_bbx_mask, object_ids = \
-            self.post_processor.generate_object_center([selected_cav_base],
-                                                       ego_pose)
+        object_bbx_center, object_bbx_mask, object_ids = self.post_processor.generate_object_center([selected_cav_base], ego_pose)
 
         # filter lidar
         lidar_np = selected_cav_base['lidar_np']
@@ -337,12 +345,8 @@ class IntermediateFusionDataset(basedataset.BaseDataset):
         lidar_np = mask_ego_points(lidar_np)
         # project the lidar to ego space
         if self.proj_first:
-            lidar_np[:, :3] = \
-                box_utils.project_points_by_matrix_torch(lidar_np[:, :3],
-                                                         transformation_matrix)
-        lidar_np = mask_points_by_range(lidar_np,
-                                        self.params['preprocess'][
-                                            'cav_lidar_range'])
+            lidar_np[:, :3] = box_utils.project_points_by_matrix_torch(lidar_np[:, :3], transformation_matrix)
+        lidar_np = mask_points_by_range(lidar_np, self.params['preprocess']['cav_lidar_range'])
         processed_lidar = self.pre_processor.preprocess(lidar_np)
 
         # velocity
@@ -431,8 +435,7 @@ class IntermediateFusionDataset(basedataset.BaseDataset):
             velocity.append(ego_dict['velocity'])
             time_delay.append(ego_dict['time_delay'])
             infra.append(ego_dict['infra'])
-            spatial_correction_matrix_list.append(
-                ego_dict['spatial_correction_matrix'])
+            spatial_correction_matrix_list.append(ego_dict['spatial_correction_matrix'])
 
             if self.visualize:
                 origin_lidar.append(ego_dict['origin_lidar'])
@@ -443,22 +446,18 @@ class IntermediateFusionDataset(basedataset.BaseDataset):
         # example: {'voxel_features':[np.array([1,2,3]]),
         # np.array([3,5,6]), ...]}
         merged_feature_dict = self.merge_features_to_dict(processed_lidar_list)
-        processed_lidar_torch_dict = \
-            self.pre_processor.collate_batch(merged_feature_dict)
+        processed_lidar_torch_dict = self.pre_processor.collate_batch(merged_feature_dict)
         # [2, 3, 4, ..., M], M <= max_cav
         record_len = torch.from_numpy(np.array(record_len, dtype=int))
-        label_torch_dict = \
-            self.post_processor.collate_batch(label_dict_list)
+        label_torch_dict = self.post_processor.collate_batch(label_dict_list)
 
         # (B, max_cav)
         velocity = torch.from_numpy(np.array(velocity))
         time_delay = torch.from_numpy(np.array(time_delay))
         infra = torch.from_numpy(np.array(infra))
-        spatial_correction_matrix_list = \
-            torch.from_numpy(np.array(spatial_correction_matrix_list))
+        spatial_correction_matrix_list = torch.from_numpy(np.array(spatial_correction_matrix_list))
         # (B, max_cav, 3)
-        prior_encoding = \
-            torch.stack([velocity, time_delay, infra], dim=-1).float()
+        prior_encoding = torch.stack([velocity, time_delay, infra], dim=-1).float()
         # (B, max_cav)
         pairwise_t_matrix = torch.from_numpy(np.array(pairwise_t_matrix_list))
 
@@ -475,8 +474,7 @@ class IntermediateFusionDataset(basedataset.BaseDataset):
                                    'pairwise_t_matrix': pairwise_t_matrix})
 
         if self.visualize:
-            origin_lidar = \
-                np.array(downsample_lidar_minimum(pcd_np_list=origin_lidar))
+            origin_lidar = np.array(downsample_lidar_minimum(pcd_np_list=origin_lidar))
             origin_lidar = torch.from_numpy(origin_lidar)
             output_dict['ego'].update({'origin_lidar': origin_lidar})
 
@@ -518,8 +516,7 @@ class IntermediateFusionDataset(basedataset.BaseDataset):
         gt_box_tensor : torch.Tensor
             The tensor of gt bounding box.
         """
-        pred_box_tensor, pred_score = \
-            self.post_processor.post_process(data_dict, output_dict)
+        pred_box_tensor, pred_score = self.post_processor.post_process(data_dict, output_dict)
         gt_box_tensor = self.post_processor.generate_gt_bbx(data_dict)
 
         return pred_box_tensor, pred_score, gt_box_tensor
