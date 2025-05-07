@@ -2,11 +2,11 @@ name: voxelnet_intermediate_fusion
 
 yaml_parser: "load_voxel_params"
 root_dir: "opv2v_data_dumping/train"
-validate_dir: "opv2v_data_dumping/validate"
+validate_dir:  "opv2v_data_dumping/validate"
 
 train_params:
-  batch_size: &batch_size 2
-  epoches: 30
+  batch_size: &batch_size 4
+  epoches: 100
   eval_freq: 1
   save_freq: 1
 
@@ -24,7 +24,7 @@ preprocess:
     max_voxel_train: 36000
     max_voxel_test: 70000
   # lidar range for each individual cav.
-  cav_lidar_range: &cav_lidar [-140.8, -41.6, -3, 140.8, 41.6, 1]
+  cav_lidar_range: &cav_lidar [-140.8, -41.6, -8, 140.8, 41.6, 8]
 
 data_augment:
   - NAME: random_world_flip
@@ -78,7 +78,7 @@ loss:
 
 optimizer:
   core_method: Adam
-  lr: 0.002
+  lr: 0.005
   args:
     eps: 1e-10
     weight_decay: 1e-4

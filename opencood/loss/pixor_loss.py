@@ -1,3 +1,4 @@
+
 # -*- coding: utf-8 -*-
 # Author: Hao Xiang <haxiang@g.ucla.edu>
 # License: TDG-Attribution-NonCommercial-NoDistrib
@@ -16,6 +17,11 @@ class PixorLoss(nn.Module):
         self.alpha = args["alpha"]
         self.beta = args["beta"]
         self.loss_dict = {}
+
+
+    def dtype(self):
+        return torch.float16
+
 
     def forward(self, output_dict, target_dict):
         """
@@ -40,14 +46,34 @@ class PixorLoss(nn.Module):
         cls_targets, loc_targets = targets.split([1, 6], dim=1)
         pos_count = cls_targets.sum()
         neg_count = (cls_targets == 0).sum()
-        w1, w2 = neg_count / (pos_count + neg_count), pos_count / (
-                    pos_count + neg_count)
-        weights = torch.ones_like(cls_preds.reshape(-1))
+
+        w1 = (neg_count / (pos_count + neg_count)).to(dtype=self.dtype())
+        w2 = (pos_count / (pos_count + neg_count)).to(dtype=self.dtype())
+
+
+
+
+        weights = torch.ones_like(cls_preds.reshape(-1), dtype=self.dtype(), device=cls_preds.device)
         weights[cls_targets.reshape(-1) == 1] = w1
         weights[cls_targets.reshape(-1) == 0] = w2
-        # cls_targets = cls_targets.float()
+
+
+
+
+
         # cls_loss = F.binary_cross_entropy_with_logits(input=cls_preds.reshape(-1), target=cls_targets.reshape(-1), weight=weights,
         #                                               reduction='mean')
+
+        print(f"cls_preds shape: {cls_preds.shape}")
+        print(f"cls_targets shape: {cls_targets.shape}")
+       # print(f"pos_neg_weights shape: {pos_neg_weights.shape}")
+
+        if cls_targets.shape[2:] != cls_preds.shape[2:]:
+            cls_targets = F.interpolate(cls_targets, size=cls_preds.shape[2:], mode='bilinear', align_corners=False)
+           # pos_neg_weights = F.interpolate(pos_neg_weights, size=cls_preds.shape[2:], mode='bilinear', align_corners=False)
+            print(f"Resized cls_targets shape: {cls_targets.shape}")
+           # print(f"Resized pos_neg_weights shape: {pos_neg_weights.shape}")
+
         cls_loss = F.binary_cross_entropy_with_logits(
             input=cls_preds, target=cls_targets,
             reduction='mean')

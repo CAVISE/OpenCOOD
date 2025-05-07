@@ -1,6 +1,7 @@
 name: point_pillar_where2comm
-root_dir: '/data/opv2x/train'
-validate_dir: '/data/opv2x/validate'
+root_dir: "opv2v_data_dumping/train"
+validate_dir:  "opv2v_data_dumping/validate"
+
 
 
 wild_setting:
@@ -17,11 +18,11 @@ wild_setting:
 
 yaml_parser: 'load_point_pillar_params'
 train_params:
-  batch_size: &batch_size 1
-  epoches: &epoches 50
+  batch_size: &batch_size 4
+  epoches: &epoches 100
   eval_freq: 1
   save_freq: 1
-  max_cav: &max_cav 5
+  max_cav: &max_cav 8
 
 fusion:
   core_method: 'IntermediateFusionDataset'  # LateFusionDataset, EarlyFusionDataset, IntermediateFusionDataset supported
@@ -32,12 +33,12 @@ preprocess:
   # Options: BasePreprocessor, VoxelPreprocessor, BevPreprocessor
   core_method: 'SpVoxelPreprocessor'
   args:
-    voxel_size: &voxel_size [ 0.4, 0.4, 4 ]
+    voxel_size: &voxel_size [ 0.4, 0.4, 16 ]
     max_points_per_voxel: 32
     max_voxel_train: 32000
     max_voxel_test: 70000
   # LiDAR range for each individual CAV
-  cav_lidar_range: &cav_lidar [ -140.8, -38.4, -3, 140.8, 38.4, 1 ]
+  cav_lidar_range: &cav_lidar [ -140.8, -38.4, -8 , 140.8, 38.4, 8 ]
 
 data_augment:
   - NAME: random_world_flip
@@ -119,7 +120,7 @@ loss:
 
 optimizer:
   core_method: Adam
-  lr: 2e-4
+  lr: 0.005
   args:
     eps: 1e-10
     weight_decay: 1e-2
@@ -127,6 +128,6 @@ optimizer:
 lr_scheduler:
   core_method: cosineannealwarm # step, multistep, exponential and cosineannealwarm support
   epoches: *epoches
-  warmup_lr: 2e-5
+  warmup_lr: 0.005
   warmup_epoches: 10
   lr_min: 5e-6

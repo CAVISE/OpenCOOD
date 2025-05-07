@@ -2,7 +2,6 @@
 # Author: Runsheng Xu <rxx3386@ucla.edu>
 # License: TDG-Attribution-NonCommercial-NoDistrib
 
-
 import argparse
 import os
 import statistics
@@ -18,7 +17,6 @@ from opencood.tools import multi_gpu_utils
 from opencood.data_utils.datasets import build_dataset
 from opencood.tools import train_utils
 
-
 def train_parser():
     parser = argparse.ArgumentParser(description="synthetic data generation")
     parser.add_argument("--hypes_yaml", type=str, required=True,
@@ -31,7 +29,6 @@ def train_parser():
                         help='url used to set up distributed training')
     opt = parser.parse_args()
     return opt
-
 
 def main():
     opt = train_parser()
@@ -85,23 +82,19 @@ def main():
         saved_path = opt.model_dir
         init_epoch, model = train_utils.load_saved_model(saved_path,
                                                          model)
-
     else:
         init_epoch = 0
-        # if we train the model from scratch, we need to create a folder
-        # to save the model,
         saved_path = train_utils.setup_train(hypes)
 
-    # we assume gpu is necessary
     if torch.cuda.is_available():
         model.to(device)
+        print(f"Training on: {next(model.parameters()).device}")
     model_without_ddp = model
 
     if opt.distributed:
-        model = \
-            torch.nn.parallel.DistributedDataParallel(model,
-                                                      device_ids=[opt.gpu],
-                                                      find_unused_parameters=True)
+        model = torch.nn.parallel.DistributedDataParallel(
+            model, device_ids=[opt.gpu], find_unused_parameters=True
+        )
         model_without_ddp = model.module
 
     # define the loss
@@ -122,7 +115,6 @@ def main():
 
     print('Training start')
     epoches = hypes['train_params']['epoches']
-    # used to help schedule learning rate
 
     for epoch in range(init_epoch, max(epoches, init_epoch)):
         if hypes['lr_scheduler']['core_method'] != 'cosineannealwarm':
@@ -138,23 +130,14 @@ def main():
         pbar2 = tqdm.tqdm(total=len(train_loader), leave=True)
 
         for i, batch_data in enumerate(train_loader):
-            # the model will be evaluation mode during validation
             model.train()
             model.zero_grad()
             optimizer.zero_grad()
 
             batch_data = train_utils.to_device(batch_data, device)
 
-            # case1 : late fusion train --> only ego needed,
-            # and ego is random selected
-            # case2 : early fusion train --> all data projected to ego
-            # case3 : intermediate fusion --> ['ego']['processed_lidar']
-            # becomes a list, which containing all data from other cavs
-            # as well
             if not opt.half:
                 ouput_dict = model(batch_data['ego'])
-                # first argument is always your output dictionary,
-                # second argument is always your label dictionary.
                 final_loss = criterion(ouput_dict,
                                        batch_data['ego']['label_dict'])
             else:
@@ -162,7 +145,6 @@ def main():
                     ouput_dict = model(batch_data['ego'])
                     final_loss = criterion(ouput_dict,
                                            batch_data['ego']['label_dict'])
-
 
             criterion.logging(epoch, i, len(train_loader), writer, pbar=pbar2)
             pbar2.update(1)
@@ -180,7 +162,7 @@ def main():
 
         if epoch % hypes['train_params']['save_freq'] == 0:
             torch.save(model_without_ddp.state_dict(),
-                os.path.join(saved_path, 'net_epoch%d.pth' % (epoch + 1)))
+                       os.path.join(saved_path, 'net_epoch%d.pth' % (epoch + 1)))
 
         if epoch % hypes['train_params']['eval_freq'] == 0:
             valid_ave_loss = []
@@ -188,20 +170,17 @@ def main():
             with torch.no_grad():
                 for i, batch_data in enumerate(val_loader):
                     model.eval()
-
                     batch_data = train_utils.to_device(batch_data, device)
                     ouput_dict = model(batch_data['ego'])
-
                     final_loss = criterion(ouput_dict,
                                            batch_data['ego']['label_dict'])
                     valid_ave_loss.append(final_loss.item())
+
             valid_ave_loss = statistics.mean(valid_ave_loss)
-            print('At epoch %d, the validation loss is %f' % (epoch,
-                                                              valid_ave_loss))
+            print('At epoch %d, the validation loss is %f' % (epoch, valid_ave_loss))
             writer.add_scalar('Validate_Loss', valid_ave_loss, epoch)
 
     print('Training Finished, checkpoints saved to %s' % saved_path)
-
 
 if __name__ == '__main__':
     main()
