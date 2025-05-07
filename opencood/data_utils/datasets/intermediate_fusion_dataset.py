@@ -58,7 +58,7 @@ class IntermediateFusionDataset(basedataset.BaseDataset):
                 selected_cav_processed = self.get_item_single_car(selected_cav_base, ego_lidar_pose)
 
                 with self.message_handler.handle_opencda_message(cav_id, 'coperception') as msg:
-                    msg['infra'] = 1 if int(cav_id) < 0 else 0  # int
+                    msg['infra'] = 1 if 'rsu' in cav_id else 0  # int
                     msg['velocity'] = selected_cav_processed['velocity']  # float
                     msg['time_delay'] = float(selected_cav_base['time_delay'])  # float
                     msg['object_ids'] = selected_cav_processed['object_ids']  # list
@@ -168,7 +168,7 @@ class IntermediateFusionDataset(basedataset.BaseDataset):
         ego_cav_base = base_data_dict.get(ego_id)
         ego_cav_processed = self.get_item_single_car(ego_cav_base, ego_lidar_pose)
 
-        infra.append(1 if int(ego_id) < 0 else 0)
+        infra.append(1 if 'rsu' in ego_id else 0)
         velocity.append(ego_cav_processed['velocity'])
         time_delay.append(float(ego_cav_base['time_delay']))
         object_id_stack += ego_cav_processed['object_ids']
@@ -246,7 +246,7 @@ class IntermediateFusionDataset(basedataset.BaseDataset):
 
             selected_cav_processed = self.get_item_single_car(selected_cav_base, ego_lidar_pose)
 
-            infra.append(1 if int(cav_id) < 0 else 0)
+            infra.append(1 if 'rsu' in cav_id else 0)
             velocity.append(selected_cav_processed['velocity'])
             time_delay.append(float(selected_cav_base['time_delay']))
             object_id_stack += selected_cav_processed['object_ids']
