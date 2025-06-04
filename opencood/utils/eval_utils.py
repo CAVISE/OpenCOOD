@@ -1,8 +1,3 @@
-# -*- coding: utf-8 -*-
-# Author: Runsheng Xu <rxx3386@ucla.edu>, Yifan Lu <yifan_lu@sjtu.edu.cn>
-# License: TDG-Attribution-NonCommercial-NoDistrib
-
-
 import os
 
 import numpy as np
@@ -160,7 +155,6 @@ def calculate_ap(result_stat, iou, global_sort_detections):
 
 def eval_final_results(result_stat, save_path, global_sort_detections):
     dump_dict = {}
-
     ap_30, mrec_30, mpre_30 = calculate_ap(result_stat, 0.30, global_sort_detections)
     ap_50, mrec_50, mpre_50 = calculate_ap(result_stat, 0.50, global_sort_detections)
     ap_70, mrec_70, mpre_70 = calculate_ap(result_stat, 0.70, global_sort_detections)
@@ -177,6 +171,6 @@ def eval_final_results(result_stat, save_path, global_sort_detections):
     output_file = 'eval.yaml' if not global_sort_detections else 'eval_global_sort.yaml'
     yaml_utils.save_yaml(dump_dict, os.path.join(save_path, output_file))
 
-    logging.info('The Average Precision at IOU 0.3 is %.2f, '
-                 'The Average Precision at IOU 0.5 is %.2f, '
-                 'The Average Precision at IOU 0.7 is %.2f' % (ap_30, ap_50, ap_70))
+    logger.info(f'The Average Precision at IOU 0.3 is {ap_30:.3f}')
+    logger.info(f'The Average Precision at IOU 0.5 is {ap_50:.3f}')
+    logger.info(f'The Average Precision at IOU 0.7 is {ap_70:.3f}')
