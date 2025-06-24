@@ -17,6 +17,17 @@ paper [OPV2V.](https://arxiv.org/abs/2109.07644)
 <img src="images/camera_demo.gif" width="600"  alt="" class="img-responsive">
 </p>
 
+## Contributing:
+We use Ruff as a linter and formatter. Before creating a pull request, check for linter warnings and then run the formatter.
+Linter:
+```bash
+ruff check
+```
+Formatter:
+```bash
+ruff format
+```
+
 ## News:
 - 12/28/2022: OpenCOOD now support multi-gpu training.
 - 12/21/2022: V2XSet (ECCV2022) is supported by OpenCOOD now!
