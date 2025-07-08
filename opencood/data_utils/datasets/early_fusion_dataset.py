@@ -34,6 +34,7 @@ class EarlyFusionDataset(basedataset.BaseDataset):
         self.post_processor = build_postprocessor(params['postprocess'], train)
 
         self.message_handler = message_handler
+        self.module_name = "OpenCOOD.EarlyFusionDataset"
 
     def __find_ego_vehicle(self, base_data_dict):
         ego_id = -1
@@ -51,7 +52,15 @@ class EarlyFusionDataset(basedataset.BaseDataset):
 
         return ego_id, ego_lidar_pose
 
-    def get_entity_item(self, idx):
+    @staticmethod
+    def __wrap_ndarray(ndarray):
+        return {
+            "data": ndarray.tobytes(),
+            "shape": ndarray.shape,
+            "dtype": str(ndarray.dtype)
+        }
+
+    def extract_data(self, idx):
         base_data_dict = self.retrieve_base_data(idx)
         _, ego_lidar_pose = self.__find_ego_vehicle(base_data_dict)
 
@@ -59,23 +68,26 @@ class EarlyFusionDataset(basedataset.BaseDataset):
             for cav_id, selected_cav_base in base_data_dict.items():
                 selected_cav_processed = self.get_item_single_car(selected_cav_base, ego_lidar_pose)
 
-                with self.message_handler.handle_opencda_message(cav_id, 'coperception') as msg:
-                    msg['object_ids'] = selected_cav_processed['object_ids']  # list
-
-                    # object_bbx_center
-                    object_bbx_center_info = selected_cav_processed['object_bbx_center']
-                    msg['object_bbx_center'] = {
-                        'data': object_bbx_center_info.tobytes(),
-                        'shape': object_bbx_center_info.shape,
-                        'dtype': str(object_bbx_center_info.dtype)
+                with self.message_handler.handle_opencda_message(cav_id, self.module_name) as msg:
+                    msg['object_ids'] = {
+                        "data": selected_cav_processed['object_ids'],  # list
+                        "label": "LABEL_REPEATED",
+                        "name": "object_ids",
+                        "type": "int64"
                     }
 
-                    # projected_lidar
-                    projected_lidar_info = selected_cav_processed['projected_lidar']
+                    msg['object_bbx_center'] = {
+                        "name": "object_bbx_center",
+                        "label": "LABEL_OPTIONAL",
+                        "type": "NDArray",
+                        "data": self.__wrap_ndarray(selected_cav_processed['object_bbx_center'])
+                    }
+
                     msg['projected_lidar'] = {
-                        'data': projected_lidar_info.tobytes(),
-                        'shape': projected_lidar_info.shape,
-                        'dtype': str(projected_lidar_info.dtype)
+                        "name": "projected_lidar",
+                        "label": "LABEL_OPTIONAL",
+                        "type": "NDArray",
+                        "data": self.__wrap_ndarray(selected_cav_processed['projected_lidar'])
                     }
 
     def __process_with_messages(self, ego_id, ego_lidar_pose, base_data_dict):
@@ -93,7 +105,7 @@ class EarlyFusionDataset(basedataset.BaseDataset):
         if ego_id in self.message_handler.current_message_artery:
             for cav_id, _ in base_data_dict.items():
                 if cav_id in self.message_handler.current_message_artery[ego_id]:
-                    with self.message_handler.handle_artery_message(ego_id, cav_id, 'coperception') as msg:
+                    with self.message_handler.handle_artery_message(ego_id, cav_id, self.module_name) as msg:
                         object_id_stack += msg['object_ids']
 
                         bbx = np.frombuffer(msg['object_bbx_center']['data'], np.dtype(msg['object_bbx_center']['dtype']))

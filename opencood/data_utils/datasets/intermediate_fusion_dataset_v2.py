@@ -39,8 +39,17 @@ class IntermediateFusionDatasetV2(basedataset.BaseDataset):
         self.post_processor = post_processor.build_postprocessor(params['postprocess'], train)
 
         self.message_handler = message_handler
+        self.module_name = "OpenCOOD.IntermediateFusionDatasetV2"
 
-    def get_entity_item(self, idx):
+    @staticmethod
+    def __wrap_ndarray(ndarray):
+        return {
+            "data": ndarray.tobytes(),
+            "shape": ndarray.shape,
+            "dtype": str(ndarray.dtype)
+        }
+
+    def extract_data(self, idx):
         base_data_dict = self.retrieve_base_data(idx, cur_ego_pose_flag=self.cur_ego_pose_flag)
         _, ego_lidar_pose = self.__find_ego_vehicle(base_data_dict)
 
@@ -48,38 +57,48 @@ class IntermediateFusionDatasetV2(basedataset.BaseDataset):
             for cav_id, selected_cav_base in base_data_dict.items():
                 selected_cav_processed = self.get_item_single_car(selected_cav_base, ego_lidar_pose)
 
-                with self.message_handler.handle_opencda_message(cav_id, 'coperception') as msg:
-                    msg['object_ids'] = selected_cav_processed['object_ids']  # list
+                with self.message_handler.handle_opencda_message(cav_id, self.module_name) as msg:
+                    msg['object_ids'] = {
+                        "data": selected_cav_processed['object_ids'],  # list
+                        "label": 'LABEL_REPEATED',
+                        "name": 'object_ids',
+                        "type": 'int64'
+                    }
 
-                    msg['object_bbx_center'] = {}
-                    object_bbx_center_info = selected_cav_processed['object_bbx_center']  # numpy.ndarray to bytes
-                    msg['object_bbx_center']['data'] = object_bbx_center_info.tobytes()
-                    msg['object_bbx_center']['shape'] = object_bbx_center_info.shape
-                    msg['object_bbx_center']['dtype'] = str(object_bbx_center_info.dtype)
+                    msg['object_bbx_center'] = {
+                        "name": "object_bbx_center",
+                        "label": "LABEL_OPTIONAL",
+                        "type": "NDArray",
+                        "data": self.__wrap_ndarray(selected_cav_processed['object_bbx_center'])
+                    }
 
-                    msg['voxel_num_points'] = {}
-                    voxel_num_points_info = selected_cav_processed['processed_features']['voxel_num_points']  # numpy.ndarray to bytes
-                    msg['voxel_num_points']['data'] = voxel_num_points_info.tobytes()
-                    msg['voxel_num_points']['shape'] = voxel_num_points_info.shape
-                    msg['voxel_num_points']['dtype'] = str(voxel_num_points_info.dtype)
+                    msg['voxel_num_points'] = {
+                        "name": "voxel_num_points",
+                        "label": "LABEL_OPTIONAL",
+                        "type": "NDArray",
+                        "data": self.__wrap_ndarray(selected_cav_processed['processed_features']['voxel_num_points'])
+                    }
 
-                    msg['voxel_features'] = {}
-                    voxel_features_info = selected_cav_processed['processed_features']['voxel_features']  # numpy.ndarray to bytes
-                    msg['voxel_features']['data'] = voxel_features_info.tobytes()
-                    msg['voxel_features']['shape'] = voxel_features_info.shape
-                    msg['voxel_features']['dtype'] = str(voxel_features_info.dtype)
+                    msg['voxel_features'] = {
+                        "name": "voxel_features",
+                        "label": "LABEL_OPTIONAL",
+                        "type": "NDArray",
+                        "data": self.__wrap_ndarray(selected_cav_processed['processed_features']['voxel_features'])
+                    }
 
-                    msg['voxel_coords'] = {}
-                    voxel_coords_info = selected_cav_processed['processed_features']['voxel_coords']  # numpy.ndarray to bytes
-                    msg['voxel_coords']['data'] = voxel_coords_info.tobytes()
-                    msg['voxel_coords']['shape'] = voxel_coords_info.shape
-                    msg['voxel_coords']['dtype'] = str(voxel_coords_info.dtype)
+                    msg['voxel_coords'] = {
+                        "name": "voxel_coords",
+                        "label": "LABEL_OPTIONAL",
+                        "type": "NDArray",
+                        "data": self.__wrap_ndarray(selected_cav_processed['processed_features']['voxel_coords'])
+                    }
 
-                    msg['projected_lidar'] = {}
-                    projected_lidar_info = selected_cav_processed['projected_lidar']   # numpy.ndarray to bytes
-                    msg['projected_lidar']['data'] = projected_lidar_info.tobytes()
-                    msg['projected_lidar']['shape'] = projected_lidar_info.shape
-                    msg['projected_lidar']['dtype'] = str(projected_lidar_info.dtype)
+                    msg['projected_lidar'] = {
+                        "name": "projected_lidar",
+                        "label": "LABEL_OPTIONAL",
+                        "type": "NDArray",
+                        "data": self.__wrap_ndarray(selected_cav_processed['projected_lidar'])
+                    }
 
     def __find_ego_vehicle(self, base_data_dict):
         ego_id = -1
@@ -115,7 +134,7 @@ class IntermediateFusionDatasetV2(basedataset.BaseDataset):
         if ego_id in self.message_handler.current_message_artery:
             for cav_id, _ in base_data_dict.items():
                 if cav_id in self.message_handler.current_message_artery[ego_id]:
-                    with self.message_handler.handle_artery_message(ego_id, cav_id, 'coperception') as msg:
+                    with self.message_handler.handle_artery_message(ego_id, cav_id, self.module_name) as msg:
 
                         projected = np.frombuffer(msg['projected_lidar']['data'], np.dtype(msg['projected_lidar']['dtype']))
                         projected = projected.reshape(msg['projected_lidar']['shape'])

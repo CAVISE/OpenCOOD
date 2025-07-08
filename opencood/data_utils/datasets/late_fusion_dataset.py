@@ -45,94 +45,104 @@ class LateFusionDataset(basedataset.BaseDataset):
 
         return reformat_data_dict
 
-    def get_entity_item(self, idx):
+    @staticmethod
+    def __wrap_ndarray(ndarray):
+        return {
+            "data": ndarray.tobytes(),
+            "shape": ndarray.shape,
+            "dtype": str(ndarray.dtype)
+        }
+
+    def extract_data(self, idx):
         base_data_dict = self.retrieve_base_data(idx)
 
         if self.message_handler is not None:
             for cav_id, selected_cav_base in base_data_dict.items():
                 selected_cav_processed = self.get_item_single_car(selected_cav_base)
 
-                with self.message_handler.handle_opencda_message(cav_id, 'coperception') as msg:
-                    msg['object_ids'] = selected_cav_processed['object_ids']  # list
-                    msg['lidar_pose'] = selected_cav_base['params']['lidar_pose']  # list
+                with self.message_handler.handle_opencda_message(cav_id, self.module_name) as msg:
+                    msg['object_ids'] = {
+                        "name": "object_ids",
+                        "label": "LABEL_REPEATED",
+                        "type": "int64",
+                        "data": selected_cav_processed['object_ids']
+                    }
 
-                    # object_bbx_center
-                    bbx_info = selected_cav_processed['object_bbx_center']
+                    msg['lidar_pose'] = {
+                        "name": "lidar_pose",
+                        "label": "LABEL_REPEATED",
+                        "type": "float",
+                        "data": selected_cav_base['params']['lidar_pose']
+                    }
+
                     msg['object_bbx_center'] = {
-                        'data': bbx_info.tobytes(),
-                        'shape': bbx_info.shape,
-                        'dtype': str(bbx_info.dtype)
+                        "name": "object_bbx_center",
+                        "label": "LABEL_OPTIONAL",
+                        "type": "NDArray",
+                        "data": self.__wrap_ndarray(selected_cav_processed['object_bbx_center'])
                     }
 
-                    # object_bbx_mask
-                    mask_info = selected_cav_processed['object_bbx_mask']
                     msg['object_bbx_mask'] = {
-                        'data': mask_info.tobytes(),
-                        'shape': mask_info.shape,
-                        'dtype': str(mask_info.dtype)
+                        "name": "object_bbx_mask",
+                        "label": "LABEL_OPTIONAL",
+                        "type": "NDArray",
+                        "data": self.__wrap_ndarray(selected_cav_processed['object_bbx_mask'])
                     }
 
-                    # anchor_box
-                    anchor_info = selected_cav_processed['anchor_box']
                     msg['anchor_box'] = {
-                        'data': anchor_info.tobytes(),
-                        'shape': anchor_info.shape,
-                        'dtype': str(anchor_info.dtype)
+                        "name": "anchor_box",
+                        "label": "LABEL_OPTIONAL",
+                        "type": "NDArray",
+                        "data": self.__wrap_ndarray(selected_cav_processed['anchor_box'])
                     }
 
-                    # label_dict.pos_equal_one
-                    pos_info = selected_cav_processed['label_dict']['pos_equal_one']
                     msg['pos_equal_one'] = {
-                        'data': pos_info.tobytes(),
-                        'shape': pos_info.shape,
-                        'dtype': str(pos_info.dtype)
+                        "name": "pos_equal_one",
+                        "label": "LABEL_OPTIONAL",
+                        "type": "NDArray",
+                        "data": self.__wrap_ndarray(selected_cav_processed['label_dict']['pos_equal_one'])
                     }
 
-                    # label_dict.neg_equal_one
-                    neg_info = selected_cav_processed['label_dict']['neg_equal_one']
                     msg['neg_equal_one'] = {
-                        'data': neg_info.tobytes(),
-                        'shape': neg_info.shape,
-                        'dtype': str(neg_info.dtype)
+                        "name": "neg_equal_one",
+                        "label": "LABEL_OPTIONAL",
+                        "type": "NDArray",
+                        "data": self.__wrap_ndarray(selected_cav_processed['label_dict']['neg_equal_one'])
                     }
 
-                    # label_dict.targets
-                    targets_info = selected_cav_processed['label_dict']['targets']
                     msg['targets'] = {
-                        'data': targets_info.tobytes(),
-                        'shape': targets_info.shape,
-                        'dtype': str(targets_info.dtype)
+                        "name": "targets",
+                        "label": "LABEL_OPTIONAL",
+                        "type": "NDArray",
+                        "data": self.__wrap_ndarray(selected_cav_processed['label_dict']['targets'])
                     }
 
-                    # processed_lidar.voxel_features
-                    voxel_features_info = selected_cav_processed['processed_lidar']['voxel_features']
                     msg['voxel_features'] = {
-                        'data': voxel_features_info.tobytes(),
-                        'shape': voxel_features_info.shape,
-                        'dtype': str(voxel_features_info.dtype)
+                        "name": "voxel_features",
+                        "label": "LABEL_OPTIONAL",
+                        "type": "NDArray",
+                        "data": self.__wrap_ndarray(selected_cav_processed['processed_lidar']['voxel_features'])
                     }
 
-                    # processed_lidar.voxel_coords
-                    voxel_coords_info = selected_cav_processed['processed_lidar']['voxel_coords']
                     msg['voxel_coords'] = {
-                        'data': voxel_coords_info.tobytes(),
-                        'shape': voxel_coords_info.shape,
-                        'dtype': str(voxel_coords_info.dtype)
+                        "name": "voxel_coords",
+                        "label": "LABEL_OPTIONAL",
+                        "type": "NDArray",
+                        "data": self.__wrap_ndarray(selected_cav_processed['processed_lidar']['voxel_coords'])
                     }
 
-                    # processed_lidar.voxel_num_points
-                    voxel_num_points_info = selected_cav_processed['processed_lidar']['voxel_num_points']
                     msg['voxel_num_points'] = {
-                        'data': voxel_num_points_info.tobytes(),
-                        'shape': voxel_num_points_info.shape,
-                        'dtype': str(voxel_num_points_info.dtype)
+                        "name": "voxel_num_points",
+                        "label": "LABEL_OPTIONAL",
+                        "type": "NDArray",
+                        "data": self.__wrap_ndarray(selected_cav_processed['processed_lidar']['voxel_num_points'])
                     }
 
-                    origin_lidar_info = selected_cav_processed['origin_lidar']
                     msg['origin_lidar'] = {
-                        'data': origin_lidar_info.tobytes(),
-                        'shape': origin_lidar_info.shape,
-                        'dtype': str(origin_lidar_info.dtype)
+                        "name": "origin_lidar",
+                        "label": "LABEL_OPTIONAL",
+                        "type": "NDArray",
+                        "data": self.__wrap_ndarray(selected_cav_processed['origin_lidar'])
                     }
 
     def __find_ego_vehicle(self, base_data_dict):
@@ -193,7 +203,7 @@ class LateFusionDataset(basedataset.BaseDataset):
         if ego_id in self.message_handler.current_message_artery:
             for cav_id, _ in base_data_dict.items():
                 if cav_id in self.message_handler.current_message_artery[ego_id]:
-                    with self.message_handler.handle_artery_message(ego_id, cav_id, 'coperception') as msg:
+                    with self.message_handler.handle_artery_message(ego_id, cav_id, self.module_name) as msg:
                         object_ids += msg['object_ids']
                         cav_lidar_pose = msg['lidar_pose']
 
