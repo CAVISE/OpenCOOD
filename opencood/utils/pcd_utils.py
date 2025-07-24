@@ -1,8 +1,3 @@
-# -*- coding: utf-8 -*-
-# Author: Runsheng Xu <rxx3386@ucla.edu>, Hao Xiang <haxiang@g.ucla.edu>,
-# License: TDG-Attribution-NonCommercial-NoDistrib
-
-
 """
 Utility functions related to point cloud
 """
@@ -56,11 +51,14 @@ def mask_points_by_range(points, limit_range):
         Filtered lidar points.
     """
 
-    mask = (points[:, 0] > limit_range[0]) & (points[:, 0] < limit_range[3])\
-           & (points[:, 1] > limit_range[1]) & (
-                   points[:, 1] < limit_range[4]) \
-           & (points[:, 2] > limit_range[2]) & (
-                   points[:, 2] < limit_range[5])
+    mask = (
+        (points[:, 0] > limit_range[0])
+        & (points[:, 0] < limit_range[3])
+        & (points[:, 1] > limit_range[1])
+        & (points[:, 1] < limit_range[4])
+        & (points[:, 2] > limit_range[2])
+        & (points[:, 2] < limit_range[5])
+    )
 
     points = points[mask]
 
@@ -81,8 +79,7 @@ def mask_ego_points(points):
     points : np.ndarray
         Filtered lidar points.
     """
-    mask = (points[:, 0] >= -1.95) & (points[:, 0] <= 2.95) \
-           & (points[:, 1] >= -1.1) & (points[:, 1] <= 1.1)
+    mask = (points[:, 0] >= -1.95) & (points[:, 0] <= 2.95) & (points[:, 1] >= -1.1) & (points[:, 1] <= 1.1)
     points = points[np.logical_not(mask)]
 
     return points
@@ -123,8 +120,7 @@ def lidar_project(lidar_data, extrinsic):
     # (n, 3)
     project_lidar_xyz = project_lidar_xyz.T
     # concatenate the intensity with xyz, (n, 4)
-    projected_lidar = np.hstack((project_lidar_xyz,
-                                 np.expand_dims(lidar_int, -1)))
+    projected_lidar = np.hstack((project_lidar_xyz, np.expand_dims(lidar_int, -1)))
 
     return projected_lidar
 
@@ -169,9 +165,7 @@ def downsample_lidar(pcd_np, num):
     """
     assert pcd_np.shape[0] >= num
 
-    selected_index = np.random.choice((pcd_np.shape[0]),
-                                      num,
-                                      replace=False)
+    selected_index = np.random.choice((pcd_np.shape[0]), num, replace=False)
     pcd_np = pcd_np[selected_index]
 
     return pcd_np
@@ -197,7 +191,7 @@ def downsample_lidar_minimum(pcd_np_list):
         num = pcd_np_list[i].shape[0]
         minimum = num if minimum > num else minimum
 
-    for (i, pcd_np) in enumerate(pcd_np_list):
+    for i, pcd_np in enumerate(pcd_np_list):
         pcd_np_list[i] = downsample_lidar(pcd_np, minimum)
 
     return pcd_np_list

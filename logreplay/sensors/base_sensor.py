@@ -1,6 +1,7 @@
 """
 Base Class for sensors
 """
+
 import cv2
 
 

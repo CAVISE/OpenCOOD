@@ -1,11 +1,7 @@
-# -*- coding: utf-8 -*-
-# Author: Runsheng Xu <rxx3386@ucla.edu>
-# License: TDG-Attribution-NonCommercial-NoDistrib
-
-
 """
 Implementation of F-cooper maxout fusing.
 """
+
 import torch
 import torch.nn as nn
 

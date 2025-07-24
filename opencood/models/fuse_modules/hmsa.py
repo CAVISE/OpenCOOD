@@ -5,13 +5,12 @@ from einops import rearrange
 
 
 class HGTCavAttention(nn.Module):
-    def __init__(self, dim, heads, num_types=2,
-                 num_relations=4, dim_head=64, dropout=0.1):
+    def __init__(self, dim, heads, num_types=2, num_relations=4, dim_head=64, dropout=0.1):
         super().__init__()
         inner_dim = heads * dim_head
 
         self.heads = heads
-        self.scale = dim_head ** -0.5
+        self.scale = dim_head**-0.5
         self.num_types = num_types
 
         self.attend = nn.Softmax(dim=-1)
@@ -27,10 +26,8 @@ class HGTCavAttention(nn.Module):
             self.v_linears.append(nn.Linear(dim, inner_dim))
             self.a_linears.append(nn.Linear(inner_dim, dim))
 
-        self.relation_att = nn.Parameter(
-            torch.Tensor(num_relations, heads, dim_head, dim_head))
-        self.relation_msg = nn.Parameter(
-            torch.Tensor(num_relations, heads, dim_head, dim_head))
+        self.relation_att = nn.Parameter(torch.Tensor(num_relations, heads, dim_head, dim_head))
+        self.relation_msg = nn.Parameter(torch.Tensor(num_relations, heads, dim_head, dim_head))
 
         torch.nn.init.xavier_uniform(self.relation_att)
         torch.nn.init.xavier_uniform(self.relation_msg)
@@ -49,12 +46,9 @@ class HGTCavAttention(nn.Module):
 
             for i in range(x.shape[-2]):
                 # (H,W,1,C)
-                q_list.append(
-                    self.q_linears[types[b, i]](x[b, :, :, i, :].unsqueeze(2)))
-                k_list.append(
-                    self.k_linears[types[b, i]](x[b, :, :, i, :].unsqueeze(2)))
-                v_list.append(
-                    self.v_linears[types[b, i]](x[b, :, :, i, :].unsqueeze(2)))
+                q_list.append(self.q_linears[types[b, i]](x[b, :, :, i, :].unsqueeze(2)))
+                k_list.append(self.k_linears[types[b, i]](x[b, :, :, i, :].unsqueeze(2)))
+                v_list.append(self.v_linears[types[b, i]](x[b, :, :, i, :].unsqueeze(2)))
             # (1,H,W,L,C)
             q_batch.append(torch.cat(q_list, dim=2).unsqueeze(0))
             k_batch.append(torch.cat(k_list, dim=2).unsqueeze(0))
@@ -81,8 +75,7 @@ class HGTCavAttention(nn.Module):
                 w_msg_i_list = []
 
                 for j in range(x.shape[-2]):
-                    e_type = self.get_relation_type_index(types[b, i],
-                                                          types[b, j])
+                    e_type = self.get_relation_type_index(types[b, i], types[b, j])
                     w_att_i_list.append(self.relation_att[e_type].unsqueeze(0))
                     w_msg_i_list.append(self.relation_msg[e_type].unsqueeze(0))
                 w_att_list.append(torch.cat(w_att_i_list, dim=0).unsqueeze(0))
@@ -101,8 +94,7 @@ class HGTCavAttention(nn.Module):
         for b in range(x.shape[0]):
             out_list = []
             for i in range(x.shape[-2]):
-                out_list.append(
-                    self.a_linears[types[b, i]](x[b, :, :, i, :].unsqueeze(2)))
+                out_list.append(self.a_linears[types[b, i]](x[b, :, :, i, :].unsqueeze(2)))
             out_batch.append(torch.cat(out_list, dim=2).unsqueeze(0))
         out = torch.cat(out_batch, dim=0)
         return out
@@ -115,9 +107,7 @@ class HGTCavAttention(nn.Module):
         # mask: (B, 1, H, W, L, 1)
         mask = mask.unsqueeze(1)
         # (B,L)
-        velocities, dts, types = [itm.squeeze(-1) for itm in
-                                  prior_encoding[:, :, 0, 0, :].split(
-                                      [1, 1, 1], dim=-1)]
+        velocities, dts, types = [itm.squeeze(-1) for itm in prior_encoding[:, :, 0, 0, :].split([1, 1, 1], dim=-1)]
         types = types.to(torch.int)
         dts = dts.to(torch.int)
         qkv = self.to_qkv(x, types)
@@ -125,25 +115,19 @@ class HGTCavAttention(nn.Module):
         w_att, w_msg = self.get_hetero_edge_weights(x, types)
 
         # q: (B, M, H, W, L, C)
-        q, k, v = map(lambda t: rearrange(t, 'b h w l (m c) -> b m h w l c',
-                                          m=self.heads), (qkv))
+        q, k, v = map(lambda t: rearrange(t, "b h w l (m c) -> b m h w l c", m=self.heads), (qkv))
         # attention, (B, M, H, W, L, L)
-        att_map = torch.einsum(
-            'b m h w i p, b m i j p q, bm h w j q -> b m h w i j',
-            [q, w_att, k]) * self.scale
+        att_map = torch.einsum("b m h w i p, b m i j p q, bm h w j q -> b m h w i j", [q, w_att, k]) * self.scale
         # add mask
-        att_map = att_map.masked_fill(mask == 0, -float('inf'))
+        att_map = att_map.masked_fill(mask == 0, -float("inf"))
         # softmax
         att_map = self.attend(att_map)
 
         # out:(B, M, H, W, L, C_head)
-        v_msg = torch.einsum('b m i j p c, b m h w j p -> b m h w i j c',
-                             w_msg, v)
-        out = torch.einsum('b m h w i j, b m h w i j c -> b m h w i c',
-                           att_map, v_msg)
+        v_msg = torch.einsum("b m i j p c, b m h w j p -> b m h w i j c", w_msg, v)
+        out = torch.einsum("b m h w i j, b m h w i j c -> b m h w i c", att_map, v_msg)
 
-        out = rearrange(out, 'b m h w l c -> b h w l (m c)',
-                        m=self.heads)
+        out = rearrange(out, "b m h w l c -> b h w l (m c)", m=self.heads)
         out = self.to_out(out, types)
         out = self.drop_out(out)
         # (B L H W C)

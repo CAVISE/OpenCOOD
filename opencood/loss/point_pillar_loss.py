@@ -1,11 +1,7 @@
-# -*- coding: utf-8 -*-
-# Author: OpenPCDet, Runsheng Xu <rxx3386@ucla.edu>
-# License: TDG-Attribution-NonCommercial-NoDistrib
-
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import numpy as np
+
 
 class WeightedSmoothL1Loss(nn.Module):
     """
@@ -16,6 +12,7 @@ class WeightedSmoothL1Loss(nn.Module):
                   | abs(x) - 0.5 * beta   otherwise,
     where x = input - target.
     """
+
     def __init__(self, beta: float = 1.0 / 9.0, code_weights: list = None):
         """
         Args:
@@ -37,12 +34,11 @@ class WeightedSmoothL1Loss(nn.Module):
             loss = torch.abs(diff)
         else:
             n = torch.abs(diff)
-            loss = torch.where(n < beta, 0.5 * n ** 2 / beta, n - 0.5 * beta)
+            loss = torch.where(n < beta, 0.5 * n**2 / beta, n - 0.5 * beta)
 
         return loss
 
-    def forward(self, input: torch.Tensor,
-                target: torch.Tensor, weights: torch.Tensor = None):
+    def forward(self, input: torch.Tensor, target: torch.Tensor, weights: torch.Tensor = None):
         """
         Args:
             input: (B, #anchors, #codes) float tensor.
@@ -75,8 +71,8 @@ class PointPillarLoss(nn.Module):
         self.alpha = 0.25
         self.gamma = 2.0
 
-        self.cls_weight = args['cls_weight']
-        self.reg_coe = args['reg']
+        self.cls_weight = args["cls_weight"]
+        self.reg_coe = args["reg"]
         self.loss_dict = {}
 
     def forward(self, output_dict, target_dict):
@@ -86,13 +82,13 @@ class PointPillarLoss(nn.Module):
         output_dict : dict
         target_dict : dict
         """
-        rm = output_dict['rm']
-        psm = output_dict['psm']
-        targets = target_dict['targets']
+        rm = output_dict["rm"]
+        psm = output_dict["psm"]
+        targets = target_dict["targets"]
 
         cls_preds = psm.permute(0, 2, 3, 1).contiguous()
 
-        box_cls_labels = target_dict['pos_equal_one']
+        box_cls_labels = target_dict["pos_equal_one"]
         box_cls_labels = box_cls_labels.view(psm.shape[0], -1).contiguous()
 
         positives = box_cls_labels > 0
@@ -108,17 +104,12 @@ class PointPillarLoss(nn.Module):
         cls_targets = cls_targets.unsqueeze(dim=-1)
 
         cls_targets = cls_targets.squeeze(dim=-1)
-        one_hot_targets = torch.zeros(
-            *list(cls_targets.shape), 2,
-            dtype=cls_preds.dtype, device=cls_targets.device
-        )
+        one_hot_targets = torch.zeros(*list(cls_targets.shape), 2, dtype=cls_preds.dtype, device=cls_targets.device)
         one_hot_targets.scatter_(-1, cls_targets.unsqueeze(dim=-1).long(), 1.0)
         cls_preds = cls_preds.view(psm.shape[0], -1, 1)
         one_hot_targets = one_hot_targets[..., 1:]
 
-        cls_loss_src = self.cls_loss_func(cls_preds,
-                                          one_hot_targets,
-                                          weights=cls_weights)  # [N, M]
+        cls_loss_src = self.cls_loss_func(cls_preds, one_hot_targets, weights=cls_weights)  # [N, M]
         cls_loss = cls_loss_src.sum() / psm.shape[0]
         conf_loss = cls_loss * self.cls_weight
 
@@ -126,26 +117,18 @@ class PointPillarLoss(nn.Module):
         rm = rm.permute(0, 2, 3, 1).contiguous()
         rm = rm.view(rm.size(0), -1, 7)
         targets = targets.view(targets.size(0), -1, 7)
-        box_preds_sin, reg_targets_sin = self.add_sin_difference(rm,
-                                                                 targets)
-        loc_loss_src =\
-            self.reg_loss_func(box_preds_sin,
-                               reg_targets_sin,
-                               weights=reg_weights)
+        box_preds_sin, reg_targets_sin = self.add_sin_difference(rm, targets)
+        loc_loss_src = self.reg_loss_func(box_preds_sin, reg_targets_sin, weights=reg_weights)
         reg_loss = loc_loss_src.sum() / rm.shape[0]
         reg_loss *= self.reg_coe
 
         total_loss = reg_loss + conf_loss
 
-        self.loss_dict.update({'total_loss': total_loss,
-                               'reg_loss': reg_loss,
-                               'conf_loss': conf_loss})
+        self.loss_dict.update({"total_loss": total_loss, "reg_loss": reg_loss, "conf_loss": conf_loss})
 
         return total_loss
 
-    def cls_loss_func(self, input: torch.Tensor,
-                      target: torch.Tensor,
-                      weights: torch.Tensor):
+    def cls_loss_func(self, input: torch.Tensor, target: torch.Tensor, weights: torch.Tensor):
         """
         Args:
             input: (B, #anchors, #classes) float tensor.
@@ -167,8 +150,7 @@ class PointPillarLoss(nn.Module):
 
         loss = focal_weight * bce_loss
 
-        if weights.shape.__len__() == 2 or \
-                (weights.shape.__len__() == 1 and target.shape.__len__() == 2):
+        if weights.shape.__len__() == 2 or (weights.shape.__len__() == 1 and target.shape.__len__() == 2):
             weights = weights.unsqueeze(-1)
 
         assert weights.shape.__len__() == loss.shape.__len__()
@@ -177,7 +159,7 @@ class PointPillarLoss(nn.Module):
 
     @staticmethod
     def sigmoid_cross_entropy_with_logits(input: torch.Tensor, target: torch.Tensor):
-        """ PyTorch Implementation for tf.nn.sigmoid_cross_entropy_with_logits:
+        """PyTorch Implementation for tf.nn.sigmoid_cross_entropy_with_logits:
             max(x, 0) - x * z + log(1 + exp(-abs(x))) in
             https://www.tensorflow.org/api_docs/python/tf/nn/sigmoid_cross_entropy_with_logits
 
@@ -191,22 +173,17 @@ class PointPillarLoss(nn.Module):
             loss: (B, #anchors, #classes) float tensor.
                 Sigmoid cross entropy loss without reduction
         """
-        loss = torch.clamp(input, min=0) - input * target + \
-               torch.log1p(torch.exp(-torch.abs(input)))
+        loss = torch.clamp(input, min=0) - input * target + torch.log1p(torch.exp(-torch.abs(input)))
         return loss
 
     @staticmethod
     def add_sin_difference(boxes1, boxes2, dim=6):
         assert dim != -1
-        rad_pred_encoding = torch.sin(boxes1[..., dim:dim + 1]) * \
-                            torch.cos(boxes2[..., dim:dim + 1])
-        rad_tg_encoding = torch.cos(boxes1[..., dim:dim + 1]) * \
-                          torch.sin(boxes2[..., dim:dim + 1])
+        rad_pred_encoding = torch.sin(boxes1[..., dim : dim + 1]) * torch.cos(boxes2[..., dim : dim + 1])
+        rad_tg_encoding = torch.cos(boxes1[..., dim : dim + 1]) * torch.sin(boxes2[..., dim : dim + 1])
 
-        boxes1 = torch.cat([boxes1[..., :dim], rad_pred_encoding,
-                            boxes1[..., dim + 1:]], dim=-1)
-        boxes2 = torch.cat([boxes2[..., :dim], rad_tg_encoding,
-                            boxes2[..., dim + 1:]], dim=-1)
+        boxes1 = torch.cat([boxes1[..., :dim], rad_pred_encoding, boxes1[..., dim + 1 :]], dim=-1)
+        boxes2 = torch.cat([boxes2[..., :dim], rad_tg_encoding, boxes2[..., dim + 1 :]], dim=-1)
         return boxes1, boxes2
 
     def logging(self, epoch, batch_id, batch_len, writer, pbar=None):
@@ -226,23 +203,20 @@ class PointPillarLoss(nn.Module):
         pbar : tqdm
             Progress bar
         """
-        total_loss = self.loss_dict['total_loss']
-        reg_loss = self.loss_dict['reg_loss']
-        conf_loss = self.loss_dict['conf_loss']
-
+        total_loss = self.loss_dict["total_loss"]
+        reg_loss = self.loss_dict["reg_loss"]
+        conf_loss = self.loss_dict["conf_loss"]
 
         if pbar is None:
-            print("[epoch %d][%d/%d], || Loss: %.4f || Conf Loss: %.4f"
-                  " || Loc Loss: %.4f" % (
-                      epoch, batch_id + 1, batch_len,
-                      total_loss.item(), conf_loss.item(), reg_loss.item()))
+            print(
+                "[epoch %d][%d/%d], || Loss: %.4f || Conf Loss: %.4f"
+                " || Loc Loss: %.4f" % (epoch, batch_id + 1, batch_len, total_loss.item(), conf_loss.item(), reg_loss.item())
+            )
         else:
-            pbar.set_description("[epoch %d][%d/%d], || Loss: %.4f || Conf Loss: %.4f"
-                  " || Loc Loss: %.4f" % (
-                      epoch, batch_id + 1, batch_len,
-                      total_loss.item(), conf_loss.item(), reg_loss.item()))
+            pbar.set_description(
+                "[epoch %d][%d/%d], || Loss: %.4f || Conf Loss: %.4f"
+                " || Loc Loss: %.4f" % (epoch, batch_id + 1, batch_len, total_loss.item(), conf_loss.item(), reg_loss.item())
+            )
 
-        writer.add_scalar('Regression_loss', reg_loss.item(),
-                          epoch * batch_len + batch_id)
-        writer.add_scalar('Confidence_loss', conf_loss.item(),
-                          epoch * batch_len + batch_id)
+        writer.add_scalar("Regression_loss", reg_loss.item(), epoch * batch_len + batch_id)
+        writer.add_scalar("Confidence_loss", conf_loss.item(), epoch * batch_len + batch_id)

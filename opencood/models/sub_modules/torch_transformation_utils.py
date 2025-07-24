@@ -1,6 +1,7 @@
 """
 torch_transformation_utils.py
 """
+
 import os
 
 import torch
@@ -8,8 +9,8 @@ import torch.nn.functional as F
 import numpy as np
 import matplotlib.pyplot as plt
 
-def get_roi_and_cav_mask(shape, cav_mask, spatial_correction_matrix,
-                         discrete_ratio, downsample_rate):
+
+def get_roi_and_cav_mask(shape, cav_mask, spatial_correction_matrix, discrete_ratio, downsample_rate):
     """
     Get mask for the combination of cav_mask and rorated ROI mask.
     Parameters
@@ -34,18 +35,15 @@ def get_roi_and_cav_mask(shape, cav_mask, spatial_correction_matrix,
     B, L, H, W, C = shape
     C = 1
     # (B,L,4,4)
-    dist_correction_matrix = get_discretized_transformation_matrix(
-        spatial_correction_matrix, discrete_ratio,
-        downsample_rate)
+    dist_correction_matrix = get_discretized_transformation_matrix(spatial_correction_matrix, discrete_ratio, downsample_rate)
     # (B*L,2,3)
-    T = get_transformation_matrix(
-        dist_correction_matrix.reshape(-1, 2, 3), (H, W))
+    T = get_transformation_matrix(dist_correction_matrix.reshape(-1, 2, 3), (H, W))
     # (B,L,1,H,W)
     roi_mask = get_rotated_roi((B, L, C, H, W), T)
     # (B,L,1,H,W)
     com_mask = combine_roi_and_cav_mask(roi_mask, cav_mask)
     # (B,H,W,1,L)
-    com_mask = com_mask.permute(0,3,4,2,1)
+    com_mask = com_mask.permute(0, 3, 4, 2, 1)
     return com_mask
 
 
@@ -95,19 +93,15 @@ def get_rotated_roi(shape, correction_matrix):
     # To reduce the computation, we only need to calculate the
     # mask for the first channel.
     # (B,L,1,H,W)
-    x = torch.ones((B, L, 1, H, W)).to(correction_matrix.dtype).to(
-        correction_matrix.device)
+    x = torch.ones((B, L, 1, H, W)).to(correction_matrix.dtype).to(correction_matrix.device)
     # (B*L,1,H,W)
-    roi_mask = warp_affine(x.reshape(-1, 1, H, W), correction_matrix,
-                           dsize=(H, W), mode="nearest")
+    roi_mask = warp_affine(x.reshape(-1, 1, H, W), correction_matrix, dsize=(H, W), mode="nearest")
     # (B,L,C,H,W)
-    roi_mask = torch.repeat_interleave(roi_mask, C, dim=1).reshape(B, L, C, H,
-                                                                   W)
+    roi_mask = torch.repeat_interleave(roi_mask, C, dim=1).reshape(B, L, C, H, W)
     return roi_mask
 
 
-def get_discretized_transformation_matrix(matrix, discrete_ratio,
-                                          downsample_rate):
+def get_discretized_transformation_matrix(matrix, discrete_ratio, downsample_rate):
     """
     Get disretized transformation matrix.
     Parameters
@@ -129,8 +123,7 @@ def get_discretized_transformation_matrix(matrix, discrete_ratio,
     """
     matrix = matrix[:, :, [0, 1], :][:, :, :, [0, 1, 3]]
     # normalize the x,y transformation
-    matrix[:, :, :, -1] = matrix[:, :, :, -1] \
-                          / (discrete_ratio * downsample_rate)
+    matrix[:, :, :, -1] = matrix[:, :, :, -1] / (discrete_ratio * downsample_rate)
 
     return matrix.type(dtype=torch.float)
 
@@ -158,8 +151,7 @@ def _torch_inverse_cast(input):
     return out
 
 
-def normal_transform_pixel(
-        height, width, device, dtype, eps=1e-14):
+def normal_transform_pixel(height, width, device, dtype, eps=1e-14):
     r"""
     Compute the normalization matrix from image size in pixels to [-1, 1].
     Args:
@@ -178,9 +170,7 @@ def normal_transform_pixel(
         tr_mat : torch.Tensor
             Normalized transform with shape :math:`(1, 3, 3)`.
     """
-    tr_mat = torch.tensor(
-        [[1.0, 0.0, -1.0], [0.0, 1.0, -1.0], [0.0, 0.0, 1.0]], device=device,
-        dtype=dtype)  # 3x3
+    tr_mat = torch.tensor([[1.0, 0.0, -1.0], [0.0, 1.0, -1.0], [0.0, 0.0, 1.0]], device=device, dtype=dtype)  # 3x3
 
     # prevent divide by zero bugs
     width_denom = eps if width == 1 else width - 1.0
@@ -238,17 +228,12 @@ def normalize_homography(dst_pix_trans_src_pix, dsize_src, dsize_dst=None):
     device = dst_pix_trans_src_pix.device
     dtype = dst_pix_trans_src_pix.dtype
     # compute the transformation pixel/norm for src/dst
-    src_norm_trans_src_pix = normal_transform_pixel(src_h, src_w, device,
-                                                    dtype).to(
-        dst_pix_trans_src_pix)
+    src_norm_trans_src_pix = normal_transform_pixel(src_h, src_w, device, dtype).to(dst_pix_trans_src_pix)
 
     src_pix_trans_src_norm = _torch_inverse_cast(src_norm_trans_src_pix)
-    dst_norm_trans_dst_pix = normal_transform_pixel(dst_h, dst_w, device,
-                                                    dtype).to(
-        dst_pix_trans_src_pix)
+    dst_norm_trans_dst_pix = normal_transform_pixel(dst_h, dst_w, device, dtype).to(dst_pix_trans_src_pix)
     # compute chain transformations
-    dst_norm_trans_src_norm: torch.Tensor = dst_norm_trans_dst_pix @ (
-            dst_pix_trans_src_pix @ src_pix_trans_src_norm)
+    dst_norm_trans_src_norm: torch.Tensor = dst_norm_trans_dst_pix @ (dst_pix_trans_src_pix @ src_pix_trans_src_norm)
     return dst_norm_trans_src_norm
 
 
@@ -309,17 +294,12 @@ def convert_affinematrix_to_homography(A):
         H : torch.Tensor
             The homography matrix with shape of :math:`(B,3,3)`.
     """
-    H: torch.Tensor = torch.nn.functional.pad(A, [0, 0, 0, 1], "constant",
-                                              value=0.0)
+    H: torch.Tensor = torch.nn.functional.pad(A, [0, 0, 0, 1], "constant", value=0.0)
     H[..., -1, -1] += 1.0
     return H
 
 
-def warp_affine(
-        src, M, dsize,
-        mode='bilinear',
-        padding_mode='zeros',
-        align_corners=True):
+def warp_affine(src, M, dsize, mode="bilinear", padding_mode="zeros", align_corners=True):
     r"""
     Transform the src based on transformation matrix M.
     Args:
@@ -348,13 +328,9 @@ def warp_affine(
 
     # src_norm_trans_dst_norm = torch.inverse(dst_norm_trans_src_norm)
     src_norm_trans_dst_norm = _torch_inverse_cast(dst_norm_trans_src_norm)
-    grid = F.affine_grid(src_norm_trans_dst_norm[:, :2, :],
-                         [B, C, dsize[0], dsize[1]],
-                         align_corners=align_corners)
+    grid = F.affine_grid(src_norm_trans_dst_norm[:, :2, :], [B, C, dsize[0], dsize[1]], align_corners=align_corners)
 
-    return F.grid_sample(src.half() if grid.dtype==torch.half else src, 
-                         grid, align_corners=align_corners, mode=mode,
-                         padding_mode=padding_mode)
+    return F.grid_sample(src.half() if grid.dtype == torch.half else src, grid, align_corners=align_corners, mode=mode, padding_mode=padding_mode)
 
 
 class Test:
@@ -376,19 +352,15 @@ class Test:
     @staticmethod
     def load_raw_transformation_matrix(N):
         a = 90 / 180 * np.pi
-        matrix = torch.Tensor([[np.cos(a), -np.sin(a), 10],
-                               [np.sin(a), np.cos(a), 10]])
-        matrix = torch.repeat_interleave(matrix.unsqueeze(0).unsqueeze(0), N,
-                                         dim=1)
+        matrix = torch.Tensor([[np.cos(a), -np.sin(a), 10], [np.sin(a), np.cos(a), 10]])
+        matrix = torch.repeat_interleave(matrix.unsqueeze(0).unsqueeze(0), N, dim=1)
         return matrix
 
     @staticmethod
     def load_raw_transformation_matrix2(N, alpha):
         a = alpha / 180 * np.pi
-        matrix = torch.Tensor([[np.cos(a), -np.sin(a), 0, 0],
-                               [np.sin(a), np.cos(a), 0, 0]])
-        matrix = torch.repeat_interleave(matrix.unsqueeze(0).unsqueeze(0), N,
-                                         dim=1)
+        matrix = torch.Tensor([[np.cos(a), -np.sin(a), 0, 0], [np.sin(a), np.cos(a), 0, 0]])
+        matrix = torch.repeat_interleave(matrix.unsqueeze(0).unsqueeze(0), N, dim=1)
         return matrix
 
     @staticmethod
@@ -411,16 +383,14 @@ class Test:
         W = 400
         # 2, 5
         cav_mask = torch.Tensor([[1, 1, 1, 0, 0], [1, 0, 0, 0, 0]])
-        x = torch.zeros(B, L, C, H, W)
+        _ = torch.zeros(B, L, C, H, W)  # x
         correction_matrix = Test.load_raw_transformation_matrix2(5, 10)
-        correction_matrix = torch.cat([correction_matrix, correction_matrix],
-                                      dim=0)
-        mask = get_roi_and_cav_mask((B, L, H, W, C), cav_mask, 
-                                    correction_matrix, 0.4, 4)
+        correction_matrix = torch.cat([correction_matrix, correction_matrix], dim=0)
+        mask = get_roi_and_cav_mask((B, L, H, W, C), cav_mask, correction_matrix, 0.4, 4)
         plt.matshow(mask[0, :, :, 0, 0])
         plt.show()
 
 
 if __name__ == "__main__":
-    os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
+    os.environ["KMP_DUPLICATE_LIB_OK"] = "True"
     Test.test_combine_roi_and_cav_mask()

@@ -8,9 +8,7 @@ from opencood.pcdet_utils.pointnet2.pointnet2_stack import pointnet2_utils
 
 
 class StackSAModuleMSG(nn.Module):
-
-    def __init__(self, *, radii: List[float], nsamples: List[int], mlps: List[List[int]],
-                 use_xyz: bool = True, pool_method='max_pool'):
+    def __init__(self, *, radii: List[float], nsamples: List[int], mlps: List[List[int]], use_xyz: bool = True, pool_method="max_pool"):
         """
         Args:
             radii: list of float, list of radii to group with
@@ -35,11 +33,7 @@ class StackSAModuleMSG(nn.Module):
 
             shared_mlps = []
             for k in range(len(mlp_spec) - 1):
-                shared_mlps.extend([
-                    nn.Conv2d(mlp_spec[k], mlp_spec[k + 1], kernel_size=1, bias=False),
-                    nn.BatchNorm2d(mlp_spec[k + 1]),
-                    nn.ReLU()
-                ])
+                shared_mlps.extend([nn.Conv2d(mlp_spec[k], mlp_spec[k + 1], kernel_size=1, bias=False), nn.BatchNorm2d(mlp_spec[k + 1]), nn.ReLU()])
             self.mlps.append(nn.Sequential(*shared_mlps))
         self.pool_method = pool_method
 
@@ -68,20 +62,14 @@ class StackSAModuleMSG(nn.Module):
         """
         new_features_list = []
         for k in range(len(self.groupers)):
-            new_features, ball_idxs = self.groupers[k](
-                xyz, xyz_batch_cnt, new_xyz, new_xyz_batch_cnt, features
-            )  # (M1 + M2, C, nsample)
+            new_features, ball_idxs = self.groupers[k](xyz, xyz_batch_cnt, new_xyz, new_xyz_batch_cnt, features)  # (M1 + M2, C, nsample)
             new_features = new_features.permute(1, 0, 2).unsqueeze(dim=0)  # (1, C, M1 + M2 ..., nsample)
             new_features = self.mlps[k](new_features)  # (1, C, M1 + M2 ..., nsample)
 
-            if self.pool_method == 'max_pool':
-                new_features = F.max_pool2d(
-                    new_features, kernel_size=[1, new_features.size(3)]
-                ).squeeze(dim=-1)  # (1, C, M1 + M2 ...)
-            elif self.pool_method == 'avg_pool':
-                new_features = F.avg_pool2d(
-                    new_features, kernel_size=[1, new_features.size(3)]
-                ).squeeze(dim=-1)  # (1, C, M1 + M2 ...)
+            if self.pool_method == "max_pool":
+                new_features = F.max_pool2d(new_features, kernel_size=[1, new_features.size(3)]).squeeze(dim=-1)  # (1, C, M1 + M2 ...)
+            elif self.pool_method == "avg_pool":
+                new_features = F.avg_pool2d(new_features, kernel_size=[1, new_features.size(3)]).squeeze(dim=-1)  # (1, C, M1 + M2 ...)
             else:
                 raise NotImplementedError
             new_features = new_features.squeeze(dim=0).permute(1, 0)  # (M1 + M2 ..., C)
@@ -101,11 +89,7 @@ class StackPointnetFPModule(nn.Module):
         super().__init__()
         shared_mlps = []
         for k in range(len(mlp) - 1):
-            shared_mlps.extend([
-                nn.Conv2d(mlp[k], mlp[k + 1], kernel_size=1, bias=False),
-                nn.BatchNorm2d(mlp[k + 1]),
-                nn.ReLU()
-            ])
+            shared_mlps.extend([nn.Conv2d(mlp[k], mlp[k + 1], kernel_size=1, bias=False), nn.BatchNorm2d(mlp[k + 1]), nn.ReLU()])
         self.mlp = nn.Sequential(*shared_mlps)
 
     def forward(self, unknown, unknown_batch_cnt, known, known_batch_cnt, unknown_feats=None, known_feats=None):
