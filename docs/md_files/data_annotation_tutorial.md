@@ -91,4 +91,3 @@ vehicles: # the surrounding vehicles that have at least one LiDAR point hit from
     speed: 19.47 # vehicle's speed
   4880: ...
 ```
-

@@ -1,10 +1,4 @@
-# -*- coding: utf-8 -*-
-
-"""Rasterization drawing functions
-"""
-
-# Author: Runsheng Xu <rxx3386@ucla.edu>
-# License: TDG-Attribution-NonCommercial-NoDistrib
+"""Rasterization drawing functions"""
 
 import numpy as np
 import cv2
@@ -16,18 +10,13 @@ INTERPOLATION_POINTS = 20
 
 AGENT_COLOR = (255, 255, 255)
 ROAD_COLOR = (255, 255, 255)
-ROAD_COLOR_VIS =  (17, 17, 31)
-Lane_COLOR = {'normal': (255, 217, 82),
-              'red': (255, 0, 0),
-              'yellow': (255, 255, 0),
-              'green': (0, 255, 0)}
+ROAD_COLOR_VIS = (17, 17, 31)
+Lane_COLOR = {"normal": (255, 217, 82), "red": (255, 0, 0), "yellow": (255, 255, 0), "green": (0, 255, 0)}
 BUILD_COLOR = (70, 70, 70)
 Terrain_COLOR = (145, 170, 100)
 SideWalk_COLOR = (244, 35, 232)
 # color map
-OBJ_COLOR_MAP = {'building': BUILD_COLOR,
-                 'terrain': Terrain_COLOR,
-                 'sidewalk': SideWalk_COLOR}
+OBJ_COLOR_MAP = {"building": BUILD_COLOR, "terrain": Terrain_COLOR, "sidewalk": SideWalk_COLOR}
 
 
 def cv2_subpixel(coords: np.ndarray) -> np.ndarray:
@@ -64,8 +53,7 @@ def draw_agent(agent_list, image):
     """
     for agent_corner in agent_list:
         agent_corner = agent_corner.reshape(-1, 2)
-        cv2.fillPoly(image, [agent_corner], AGENT_COLOR,
-                     **CV2_SUB_VALUES)
+        cv2.fillPoly(image, [agent_corner], AGENT_COLOR, **CV2_SUB_VALUES)
     return image
 
 
@@ -92,9 +80,9 @@ def draw_road(lane_area_list, image, visualize=False):
 
     for lane_area in lane_area_list:
         lane_area = lane_area.reshape(-1, 2)
-        cv2.fillPoly(image, [lane_area], color,
-                     **CV2_SUB_VALUES)
+        cv2.fillPoly(image, [lane_area], color, **CV2_SUB_VALUES)
     return image
+
 
 def road_exclude(static_road):
     """
@@ -119,8 +107,7 @@ def road_exclude(static_road):
     return static_road
 
 
-def draw_lane(lane_area_list, lane_type_list, image,
-              intersection_list=None, vis=True):
+def draw_lane(lane_area_list, lane_type_list, image, intersection_list=None, vis=True):
     """
     Draw lanes on image (polylines).
 
@@ -146,16 +133,10 @@ def draw_lane(lane_area_list, lane_type_list, image,
     if intersection_list is None:
         intersection_list = [False] * len(lane_area_list)
 
-    for (lane_area, lane_type, inter_flag) in zip(lane_area_list,
-                                                  lane_type_list,
-                                                  intersection_list):
+    for lane_area, lane_type, inter_flag in zip(lane_area_list, lane_type_list, intersection_list):
         if inter_flag:
             continue
-        cv2.polylines(image,
-                      lane_area,
-                      False,
-                      Lane_COLOR[lane_type] if vis else (255, 255, 255),
-                      **CV2_SUB_VALUES)
+        cv2.polylines(image, lane_area, False, Lane_COLOR[lane_type] if vis else (255, 255, 255), **CV2_SUB_VALUES)
 
     return image
 
@@ -183,18 +164,10 @@ def draw_crosswalks(lane_area_list, image):
         up_line = lane_area[0]
         bottom_line = lane_area[1]
 
-        cv2.line(image, (up_line[0, 0], up_line[0, 1]),
-                 (up_line[-1, 0], up_line[-1, 1]),
-                 (255, 255, 255), 2, **CV2_SUB_VALUES)
-        cv2.line(image, (bottom_line[0, 0], bottom_line[0, 1]),
-                 (bottom_line[-1, 0], bottom_line[-1, 1]),
-                 (255, 255, 255), 2, **CV2_SUB_VALUES)
-        cv2.line(image, (up_line[0, 0], up_line[0, 1]),
-                 (bottom_line[-1, 0], bottom_line[-1, 1]),
-                 (255, 255, 255), 2, **CV2_SUB_VALUES)
-        cv2.line(image, (up_line[-1, 0], up_line[-1, 1]),
-                 (bottom_line[0, 0], bottom_line[0, 1]),
-                 (255, 255, 255), 2, **CV2_SUB_VALUES)
+        cv2.line(image, (up_line[0, 0], up_line[0, 1]), (up_line[-1, 0], up_line[-1, 1]), (255, 255, 255), 2, **CV2_SUB_VALUES)
+        cv2.line(image, (bottom_line[0, 0], bottom_line[0, 1]), (bottom_line[-1, 0], bottom_line[-1, 1]), (255, 255, 255), 2, **CV2_SUB_VALUES)
+        cv2.line(image, (up_line[0, 0], up_line[0, 1]), (bottom_line[-1, 0], bottom_line[-1, 1]), (255, 255, 255), 2, **CV2_SUB_VALUES)
+        cv2.line(image, (up_line[-1, 0], up_line[-1, 1]), (bottom_line[0, 0], bottom_line[0, 1]), (255, 255, 255), 2, **CV2_SUB_VALUES)
     return image
 
 
@@ -213,8 +186,6 @@ def draw_city_objects(city_obj_info, image):
     """
     for obj_category, obj_content in city_obj_info.items():
         for _, obj in obj_content.items():
-            obj_corner = obj['corner_area'].reshape(-1, 2)
-            cv2.fillPoly(image, [obj_corner], OBJ_COLOR_MAP[obj_category],
-                         **CV2_SUB_VALUES)
+            obj_corner = obj["corner_area"].reshape(-1, 2)
+            cv2.fillPoly(image, [obj_corner], OBJ_COLOR_MAP[obj_category], **CV2_SUB_VALUES)
     return image
-

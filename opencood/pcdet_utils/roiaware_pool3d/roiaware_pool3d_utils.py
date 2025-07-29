@@ -63,8 +63,8 @@ class RoIAwarePool3d(nn.Module):
         self.out_size = out_size
         self.max_pts_each_voxel = max_pts_each_voxel
 
-    def forward(self, rois, pts, pts_feature, pool_method='max'):
-        assert pool_method in ['max', 'avg']
+    def forward(self, rois, pts, pts_feature, pool_method="max"):
+        assert pool_method in ["max", "avg"]
         return RoIAwarePool3dFunction.apply(rois, pts, pts_feature, self.out_size, self.max_pts_each_voxel, pool_method)
 
 
@@ -101,7 +101,7 @@ class RoIAwarePool3dFunction(Function):
         argmax = pts_feature.new_zeros((num_rois, out_x, out_y, out_z, num_channels), dtype=torch.int)
         pts_idx_of_voxels = pts_feature.new_zeros((num_rois, out_x, out_y, out_z, max_pts_each_voxel), dtype=torch.int)
 
-        pool_method_map = {'max': 0, 'avg': 1}
+        pool_method_map = {"max": 0, "avg": 1}
         pool_method = pool_method_map[pool_method]
         roiaware_pool3d_cuda.forward(rois, pts, pts_feature, argmax, pts_idx_of_voxels, pooled_features, pool_method)
 
@@ -123,5 +123,5 @@ class RoIAwarePool3dFunction(Function):
         return None, None, grad_in, None, None, None
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     pass

@@ -1,7 +1,7 @@
 name: ciassd_late_fusion
 
 yaml_parser: "load_voxel_params"
-root_dir: "opv2v_data_dumping/train" 
+root_dir: "opv2v_data_dumping/train"
 validate_dir: "opv2v_data_dumping/validate"
 
 train_params:

@@ -11,35 +11,32 @@ from opencood.models.sub_modules.point_pillar_scatter import PointPillarScatter
 class PointPillarWhere2comm(nn.Module):
     def __init__(self, args):
         super(PointPillarWhere2comm, self).__init__()
-        self.max_cav = args['max_cav']
+        self.max_cav = args["max_cav"]
         # Pillar VFE
-        self.pillar_vfe = PillarVFE(args['pillar_vfe'],
-                                    num_point_features=4,
-                                    voxel_size=args['voxel_size'],
-                                    point_cloud_range=args['lidar_range'])
-        self.scatter = PointPillarScatter(args['point_pillar_scatter'])
-        self.backbone = BaseBEVBackbone(args['base_bev_backbone'], 64)
+        self.pillar_vfe = PillarVFE(args["pillar_vfe"], num_point_features=4, voxel_size=args["voxel_size"], point_cloud_range=args["lidar_range"])
+        self.scatter = PointPillarScatter(args["point_pillar_scatter"])
+        self.backbone = BaseBEVBackbone(args["base_bev_backbone"], 64)
 
         # Used to down-sample the feature map for efficient computation
-        if 'shrink_header' in args:
+        if "shrink_header" in args:
             self.shrink_flag = True
-            self.shrink_conv = DownsampleConv(args['shrink_header'])
+            self.shrink_conv = DownsampleConv(args["shrink_header"])
         else:
             self.shrink_flag = False
 
-        if args['compression']:
+        if args["compression"]:
             self.compression = True
-            self.naive_compressor = NaiveCompressor(256, args['compression'])
+            self.naive_compressor = NaiveCompressor(256, args["compression"])
         else:
             self.compression = False
 
-        self.fusion_net = Where2comm(args['where2comm_fusion'])
-        self.multi_scale = args['where2comm_fusion']['multi_scale']
+        self.fusion_net = Where2comm(args["where2comm_fusion"])
+        self.multi_scale = args["where2comm_fusion"]["multi_scale"]
 
-        self.cls_head = nn.Conv2d(args['head_dim'], args['anchor_number'], kernel_size=1)
-        self.reg_head = nn.Conv2d(args['head_dim'], 7 * args['anchor_number'], kernel_size=1)
+        self.cls_head = nn.Conv2d(args["head_dim"], args["anchor_number"], kernel_size=1)
+        self.reg_head = nn.Conv2d(args["head_dim"], 7 * args["anchor_number"], kernel_size=1)
 
-        if args['backbone_fix']:
+        if args["backbone_fix"]:
             self.backbone_fix()
 
     def backbone_fix(self):
@@ -69,16 +66,13 @@ class PointPillarWhere2comm(nn.Module):
             p.requires_grad = False
 
     def forward(self, data_dict):
-        voxel_features = data_dict['processed_lidar']['voxel_features']
-        voxel_coords = data_dict['processed_lidar']['voxel_coords']
-        voxel_num_points = data_dict['processed_lidar']['voxel_num_points']
-        record_len = data_dict['record_len']
-        pairwise_t_matrix = data_dict['pairwise_t_matrix']
+        voxel_features = data_dict["processed_lidar"]["voxel_features"]
+        voxel_coords = data_dict["processed_lidar"]["voxel_coords"]
+        voxel_num_points = data_dict["processed_lidar"]["voxel_num_points"]
+        record_len = data_dict["record_len"]
+        pairwise_t_matrix = data_dict["pairwise_t_matrix"]
 
-        batch_dict = {'voxel_features': voxel_features,
-                      'voxel_coords': voxel_coords,
-                      'voxel_num_points': voxel_num_points,
-                      'record_len': record_len}
+        batch_dict = {"voxel_features": voxel_features, "voxel_coords": voxel_coords, "voxel_num_points": voxel_num_points, "record_len": record_len}
         # n, 4 -> n, c
         batch_dict = self.pillar_vfe(batch_dict)
         # n, c -> N, C, H, W
@@ -86,7 +80,7 @@ class PointPillarWhere2comm(nn.Module):
         batch_dict = self.backbone(batch_dict)
 
         # N, C, H', W': [N, 256, 48, 176]
-        spatial_features_2d = batch_dict['spatial_features_2d']
+        spatial_features_2d = batch_dict["spatial_features_2d"]
         # Down-sample feature to reduce memory
         if self.shrink_flag:
             spatial_features_2d = self.shrink_conv(spatial_features_2d)
@@ -100,21 +94,16 @@ class PointPillarWhere2comm(nn.Module):
 
         if self.multi_scale:
             # Bypass communication cost, communicate at high resolution, neither shrink nor compress
-            fused_feature, communication_rates = self.fusion_net(batch_dict['spatial_features'],
-                                                                 psm_single,
-                                                                 record_len,
-                                                                 pairwise_t_matrix,
-                                                                 self.backbone)
+            fused_feature, communication_rates = self.fusion_net(
+                batch_dict["spatial_features"], psm_single, record_len, pairwise_t_matrix, self.backbone
+            )
             if self.shrink_flag:
                 fused_feature = self.shrink_conv(fused_feature)
         else:
-            fused_feature, communication_rates = self.fusion_net(spatial_features_2d,
-                                                                 psm_single,
-                                                                 record_len,
-                                                                 pairwise_t_matrix)
+            fused_feature, communication_rates = self.fusion_net(spatial_features_2d, psm_single, record_len, pairwise_t_matrix)
 
         psm = self.cls_head(fused_feature)
         rm = self.reg_head(fused_feature)
 
-        output_dict = {'psm': psm, 'rm': rm, 'com': communication_rates}
+        output_dict = {"psm": psm, "rm": rm, "com": communication_rates}
         return output_dict

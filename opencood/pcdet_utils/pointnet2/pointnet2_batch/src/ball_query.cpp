@@ -14,7 +14,7 @@ All Rights Reserved 2018.
 #define CHECK_CONTIGUOUS(x) TORCH_CHECK(x.is_contiguous(), #x " must be contiguous")
 #define CHECK_INPUT(x) CHECK_CUDA(x); CHECK_CONTIGUOUS(x)
 
-int ball_query_wrapper_fast(int b, int n, int m, float radius, int nsample, 
+int ball_query_wrapper_fast(int b, int n, int m, float radius, int nsample,
     at::Tensor new_xyz_tensor, at::Tensor xyz_tensor, at::Tensor idx_tensor) {
 
     CHECK_INPUT(new_xyz_tensor);
