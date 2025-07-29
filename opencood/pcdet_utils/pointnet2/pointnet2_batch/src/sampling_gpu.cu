@@ -12,7 +12,7 @@ All Rights Reserved 2018.
 #include "sampling_gpu.h"
 
 
-__global__ void gather_points_kernel_fast(int b, int c, int n, int m, 
+__global__ void gather_points_kernel_fast(int b, int c, int n, int m,
     const float *__restrict__ points, const int *__restrict__ idx, float *__restrict__ out) {
     // points: (B, C, N)
     // idx: (B, M)
@@ -30,7 +30,7 @@ __global__ void gather_points_kernel_fast(int b, int c, int n, int m,
     out[0] = points[idx[0]];
 }
 
-void gather_points_kernel_launcher_fast(int b, int c, int n, int npoints, 
+void gather_points_kernel_launcher_fast(int b, int c, int n, int npoints,
     const float *points, const int *idx, float *out) {
     // points: (B, C, N)
     // idx: (B, npoints)
@@ -50,7 +50,7 @@ void gather_points_kernel_launcher_fast(int b, int c, int n, int npoints,
     }
 }
 
-__global__ void gather_points_grad_kernel_fast(int b, int c, int n, int m, const float *__restrict__ grad_out, 
+__global__ void gather_points_grad_kernel_fast(int b, int c, int n, int m, const float *__restrict__ grad_out,
     const int *__restrict__ idx, float *__restrict__ grad_points) {
     // grad_out: (B, C, M)
     // idx: (B, M)
@@ -69,7 +69,7 @@ __global__ void gather_points_grad_kernel_fast(int b, int c, int n, int m, const
     atomicAdd(grad_points + idx[0], grad_out[0]);
 }
 
-void gather_points_grad_kernel_launcher_fast(int b, int c, int n, int npoints, 
+void gather_points_grad_kernel_launcher_fast(int b, int c, int n, int npoints,
     const float *grad_out, const int *idx, float *grad_points) {
     // grad_out: (B, C, npoints)
     // idx: (B, npoints)
@@ -98,7 +98,7 @@ __device__ void __update(float *__restrict__ dists, int *__restrict__ dists_i, i
 }
 
 template <unsigned int block_size>
-__global__ void furthest_point_sampling_kernel(int b, int n, int m, 
+__global__ void furthest_point_sampling_kernel(int b, int n, int m,
     const float *__restrict__ dataset, float *__restrict__ temp, int *__restrict__ idxs) {
     // dataset: (B, N, 3)
     // tmp: (B, N)
@@ -215,7 +215,7 @@ __global__ void furthest_point_sampling_kernel(int b, int n, int m,
     }
 }
 
-void furthest_point_sampling_kernel_launcher(int b, int n, int m, 
+void furthest_point_sampling_kernel_launcher(int b, int n, int m,
     const float *dataset, float *temp, int *idxs) {
     // dataset: (B, N, 3)
     // tmp: (B, N)

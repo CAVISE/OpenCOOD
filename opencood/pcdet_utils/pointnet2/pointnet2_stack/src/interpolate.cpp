@@ -18,8 +18,8 @@ All Rights Reserved 2019-2020.
 #define CHECK_INPUT(x) CHECK_CUDA(x); CHECK_CONTIGUOUS(x)
 
 
-void three_nn_wrapper_stack(at::Tensor unknown_tensor, 
-    at::Tensor unknown_batch_cnt_tensor, at::Tensor known_tensor, 
+void three_nn_wrapper_stack(at::Tensor unknown_tensor,
+    at::Tensor unknown_batch_cnt_tensor, at::Tensor known_tensor,
     at::Tensor known_batch_cnt_tensor, at::Tensor dist2_tensor, at::Tensor idx_tensor) {
 
     CHECK_INPUT(unknown_tensor);
@@ -44,7 +44,7 @@ void three_nn_wrapper_stack(at::Tensor unknown_tensor,
 }
 
 
-void three_interpolate_wrapper_stack(at::Tensor features_tensor, 
+void three_interpolate_wrapper_stack(at::Tensor features_tensor,
     at::Tensor idx_tensor, at::Tensor weight_tensor, at::Tensor out_tensor) {
 
     CHECK_INPUT(features_tensor);

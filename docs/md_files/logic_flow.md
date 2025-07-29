@@ -20,15 +20,15 @@ distinct PyTorch dataset class: `EarlyFusionDataset`, `LateFusionDataset`, and `
 These three classes share the same interface and inherit from `BaseDataset`.
 
 #### BaseDataset
-There are two major tasks for `BaseDataset`. 
+There are two major tasks for `BaseDataset`.
 - First, given the path to the dataset, `BaseDataset` will construct a scenario database (dictionary format). The scenarior database is indexed by scenarior id, agent id and timestamp and returns file pathes for various sensors and saved yaml data. Here is an example of how the database structured:
 ```yaml
 
-{scenario_id : 
-    {agent_1 : 
-       {timestamp1 : 
+{scenario_id :
+    {agent_1 :
+       {timestamp1 :
           {yaml: path (str),
-           lidar: path (str), 
+           lidar: path (str),
            cameras: alist of path to 4 dfferent cameras}}}}
 
 ```
@@ -53,12 +53,12 @@ All of these 3 classes will inherit the `BaseDataset` to first construct a scena
 5. Structure all the information in a dictionary. The processed format will be:
 ```yaml
 { agent_id:
-   { 'object_bbx_center': numpy array, # the bounding boxes of all objects with padding 
+   { 'object_bbx_center': numpy array, # the bounding boxes of all objects with padding
      'object_bbx_mask': numpy array, # indicate the valid index for object_bbx_center
      'object_ids': a list of integer, # objects
      'anchor_box': numpy array, # pre-defined anchor box for detection
      'processed_lidar': numpy array, # voxel/bev features generated from preprocessor
-     'label_dict': numpy array, # the groundtruth that can be directly used for computing loss during training 
+     'label_dict': numpy array, # the groundtruth that can be directly used for computing loss during training
    }
 }
 ```
@@ -82,4 +82,4 @@ The postprocessor has three purposes:
 ### Models
 
 ---
-All the models' architecture designs are saved in `opencood/models`. For early fusion and late fusion, each model file only have the backbone codes. For intermediate fusion, the model files have both backbone and fusion net codes. 
+All the models' architecture designs are saved in `opencood/models`. For early fusion and late fusion, each model file only have the backbone codes. For intermediate fusion, the model files have both backbone and fusion net codes.

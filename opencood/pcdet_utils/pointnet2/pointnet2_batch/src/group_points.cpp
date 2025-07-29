@@ -9,14 +9,14 @@ All Rights Reserved 2018.
 #include <cuda_runtime_api.h>
 #include <vector>
 
-#include "group_points_gpu.h" 
+#include "group_points_gpu.h"
 
 #define CHECK_CUDA(x) TORCH_CHECK(x.is_cuda(), #x " must be a CUDA tensor")
 #define CHECK_CONTIGUOUS(x) TORCH_CHECK(x.is_contiguous(), #x " must be contiguous")
 #define CHECK_INPUT(x) CHECK_CUDA(x); CHECK_CONTIGUOUS(x)
 
 
-int group_points_grad_wrapper_fast(int b, int c, int n, int npoints, int nsample, 
+int group_points_grad_wrapper_fast(int b, int c, int n, int npoints, int nsample,
     at::Tensor grad_out_tensor, at::Tensor idx_tensor, at::Tensor grad_points_tensor) {
 
     CHECK_INPUT(grad_out_tensor);
@@ -32,7 +32,7 @@ int group_points_grad_wrapper_fast(int b, int c, int n, int npoints, int nsample
 }
 
 
-int group_points_wrapper_fast(int b, int c, int n, int npoints, int nsample, 
+int group_points_wrapper_fast(int b, int c, int n, int npoints, int nsample,
     at::Tensor points_tensor, at::Tensor idx_tensor, at::Tensor out_tensor) {
 
     CHECK_INPUT(points_tensor);

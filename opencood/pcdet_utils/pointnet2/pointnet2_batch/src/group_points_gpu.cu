@@ -11,7 +11,7 @@ All Rights Reserved 2018.
 #include "group_points_gpu.h"
 
 
-__global__ void group_points_grad_kernel_fast(int b, int c, int n, int npoints, int nsample, 
+__global__ void group_points_grad_kernel_fast(int b, int c, int n, int npoints, int nsample,
     const float *__restrict__ grad_out, const int *__restrict__ idx, float *__restrict__ grad_points) {
     // grad_out: (B, C, npoints, nsample)
     // idx: (B, npoints, nsample)
@@ -25,12 +25,12 @@ __global__ void group_points_grad_kernel_fast(int b, int c, int n, int npoints, 
 
     int sample_idx = index % nsample;
     grad_out += bs_idx * c * npoints * nsample + c_idx * npoints * nsample + pt_idx * nsample + sample_idx;
-    idx += bs_idx * npoints * nsample + pt_idx * nsample + sample_idx; 
-    
+    idx += bs_idx * npoints * nsample + pt_idx * nsample + sample_idx;
+
     atomicAdd(grad_points + bs_idx * c * n + c_idx * n + idx[0] , grad_out[0]);
 }
 
-void group_points_grad_kernel_launcher_fast(int b, int c, int n, int npoints, int nsample, 
+void group_points_grad_kernel_launcher_fast(int b, int c, int n, int npoints, int nsample,
     const float *grad_out, const int *idx, float *grad_points) {
     // grad_out: (B, C, npoints, nsample)
     // idx: (B, npoints, nsample)
@@ -50,7 +50,7 @@ void group_points_grad_kernel_launcher_fast(int b, int c, int n, int npoints, in
 }
 
 
-__global__ void group_points_kernel_fast(int b, int c, int n, int npoints, int nsample, 
+__global__ void group_points_kernel_fast(int b, int c, int n, int npoints, int nsample,
     const float *__restrict__ points, const int *__restrict__ idx, float *__restrict__ out) {
     // points: (B, C, N)
     // idx: (B, npoints, nsample)
@@ -64,7 +64,7 @@ __global__ void group_points_kernel_fast(int b, int c, int n, int npoints, int n
 
     int sample_idx = index % nsample;
 
-    idx += bs_idx * npoints * nsample + pt_idx * nsample + sample_idx; 
+    idx += bs_idx * npoints * nsample + pt_idx * nsample + sample_idx;
     int in_idx = bs_idx * c * n + c_idx * n + idx[0];
     int out_idx = bs_idx * c * npoints * nsample + c_idx * npoints * nsample + pt_idx * nsample + sample_idx;
 
@@ -72,7 +72,7 @@ __global__ void group_points_kernel_fast(int b, int c, int n, int npoints, int n
 }
 
 
-void group_points_kernel_launcher_fast(int b, int c, int n, int npoints, int nsample, 
+void group_points_kernel_launcher_fast(int b, int c, int n, int npoints, int nsample,
     const float *points, const int *idx, float *out) {
     // points: (B, C, N)
     // idx: (B, npoints, nsample)

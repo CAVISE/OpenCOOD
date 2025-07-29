@@ -67,5 +67,3 @@ lr_scheduler:
   warmup_lr: 0.00001  # Initial learning rate for warming up
   warmup_epoches: 5  # Number of epochs to warm up
   lr_min: 0.00001  # The minimum value of the learning rate
-
-

@@ -43,7 +43,7 @@ pip install -r requirements.txt
 Go to https://pytorch.org/ to install pytorch cuda version.
 
 ### 3. Spconv (1.2.1 or 2.x)
-OpenCOOD support both spconv 1.2.1 and 2.x to generate voxel features. 
+OpenCOOD support both spconv 1.2.1 and 2.x to generate voxel features.
 
 To install spconv 1.2.1, please follow the guide in https://github.com/traveller59/spconv/tree/v1.2.1.
 
@@ -59,7 +59,7 @@ pip install spconv-cu113
 
 ### 4. Bbx IOU cuda version compile
 Install bbx nms calculation cuda version
-  
+
   ```bash
   python opencood/utils/setup.py build_ext --inplace
   ```
@@ -67,7 +67,7 @@ Install bbx nms calculation cuda version
 
 ### 5. Dependencies for FPV-RCNN (optional)
 Install the dependencies for fpv-rcnn.
-  
+
   ```bash
   python opencood/pcdet_utils/setup.py build_ext --inplace
   ```
