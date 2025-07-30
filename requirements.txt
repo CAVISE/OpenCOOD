@@ -9,10 +9,10 @@ numpy==1.26.4
 open3d
 opencv-python
 PyYAML
+ruff
 scikit-image
 scipy
 shapely
 tensorboardX
 timm
-ruff
 tqdm
