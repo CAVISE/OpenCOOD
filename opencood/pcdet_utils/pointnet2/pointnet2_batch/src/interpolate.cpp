@@ -19,7 +19,7 @@ All Rights Reserved 2018.
 #define CHECK_INPUT(x) CHECK_CUDA(x); CHECK_CONTIGUOUS(x)
 
 
-void three_nn_wrapper_fast(int b, int n, int m, at::Tensor unknown_tensor, 
+void three_nn_wrapper_fast(int b, int n, int m, at::Tensor unknown_tensor,
     at::Tensor known_tensor, at::Tensor dist2_tensor, at::Tensor idx_tensor) {
 
     CHECK_INPUT(unknown_tensor);

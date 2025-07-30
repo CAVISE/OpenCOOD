@@ -184,5 +184,3 @@ int nms_normal_gpu(at::Tensor boxes, at::Tensor keep, float nms_overlap_thresh){
 
     return num_to_keep;
 }
-
-

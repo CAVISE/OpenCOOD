@@ -15,12 +15,12 @@ class Communication(nn.Module):
     def __init__(self, args):
         super(Communication, self).__init__()
         # Threshold of objectiveness
-        self.threshold = args['threshold']
-        if 'gaussian_smooth' in args:
+        self.threshold = args["threshold"]
+        if "gaussian_smooth" in args:
             # Gaussian Smooth
             self.smooth = True
-            kernel_size = args['gaussian_smooth']['k_size']
-            c_sigma = args['gaussian_smooth']['c_sigma']
+            kernel_size = args["gaussian_smooth"]["k_size"]
+            c_sigma = args["gaussian_smooth"]["c_sigma"]
             self.gaussian_filter = nn.Conv2d(1, 1, kernel_size=kernel_size, stride=1, padding=(kernel_size - 1) // 2)
             self.init_gaussian_filter(kernel_size, c_sigma)
             self.gaussian_filter.requires_grad = False
@@ -29,11 +29,10 @@ class Communication(nn.Module):
 
     def init_gaussian_filter(self, k_size=5, sigma=1.0):
         center = k_size // 2
-        x, y = np.mgrid[0 - center: k_size - center, 0 - center: k_size - center]
+        x, y = np.mgrid[0 - center : k_size - center, 0 - center : k_size - center]
         gaussian_kernel = 1 / (2 * np.pi * sigma) * np.exp(-(np.square(x) + np.square(y)) / (2 * np.square(sigma)))
 
-        self.gaussian_filter.weight.data = torch.Tensor(gaussian_kernel).to(
-            self.gaussian_filter.weight.device).unsqueeze(0).unsqueeze(0)
+        self.gaussian_filter.weight.data = torch.Tensor(gaussian_kernel).to(self.gaussian_filter.weight.device).unsqueeze(0).unsqueeze(0)
         self.gaussian_filter.bias.data.zero_()
 
     def forward(self, batch_confidence_maps, B):
@@ -96,28 +95,28 @@ class AttentionFusion(nn.Module):
 class Where2comm(nn.Module):
     def __init__(self, args):
         super(Where2comm, self).__init__()
-        self.discrete_ratio = args['voxel_size'][0]
-        self.downsample_rate = args['downsample_rate']
+        self.discrete_ratio = args["voxel_size"][0]
+        self.downsample_rate = args["downsample_rate"]
 
-        self.fully = args['fully']
+        self.fully = args["fully"]
         if self.fully:
-            print('constructing a fully connected communication graph')
+            print("constructing a fully connected communication graph")
         else:
-            print('constructing a partially connected communication graph')
+            print("constructing a partially connected communication graph")
 
-        self.multi_scale = args['multi_scale']
+        self.multi_scale = args["multi_scale"]
         if self.multi_scale:
-            layer_nums = args['layer_nums']
-            num_filters = args['num_filters']
+            layer_nums = args["layer_nums"]
+            num_filters = args["num_filters"]
             self.num_levels = len(layer_nums)
             self.fuse_modules = nn.ModuleList()
             for idx in range(self.num_levels):
                 fuse_network = AttentionFusion(num_filters[idx])
                 self.fuse_modules.append(fuse_network)
         else:
-            self.fuse_modules = AttentionFusion(args['in_channels'])
+            self.fuse_modules = AttentionFusion(args["in_channels"])
 
-        self.naive_communication = Communication(args['communication'])
+        self.naive_communication = Communication(args["communication"])
 
     def regroup(self, x, record_len):
         cum_sum_len = torch.cumsum(record_len, dim=0)
@@ -155,8 +154,9 @@ class Where2comm(nn.Module):
                         batch_confidence_maps = self.regroup(psm_single, record_len)
                         communication_masks, communication_rates = self.naive_communication(batch_confidence_maps, B)
                         if x.shape[-1] != communication_masks.shape[-1]:
-                            communication_masks = F.interpolate(communication_masks, size=(x.shape[-2], x.shape[-1]),
-                                                                mode='bilinear', align_corners=False)
+                            communication_masks = F.interpolate(
+                                communication_masks, size=(x.shape[-2], x.shape[-1]), mode="bilinear", align_corners=False
+                            )
                         x = x * communication_masks
 
                 # 2. Split the features

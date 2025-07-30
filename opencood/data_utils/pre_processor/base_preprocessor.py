@@ -1,7 +1,3 @@
-# -*- coding: utf-8 -*-
-# Author: Runsheng Xu <rxx3386@ucla.edu>
-# License: TDG-Attribution-NonCommercial-NoDistrib
-
 import numpy as np
 
 from opencood.utils import pcd_utils
@@ -38,10 +34,10 @@ class BasePreprocessor(object):
         data_dict : the output dictionary.
         """
         data_dict = {}
-        sample_num = self.params['args']['sample_num']
+        sample_num = self.params["args"]["sample_num"]
 
         pcd_np = pcd_utils.downsample_lidar(pcd_np, sample_num)
-        data_dict['downsample_lidar'] = pcd_np
+        data_dict["downsample_lidar"] = pcd_np
 
         return data_dict
 
@@ -72,8 +68,7 @@ class BasePreprocessor(object):
         # (N, 3)
         indices = ((points[:, :3] - bev_origin) / ratio).astype(int)
         mask = np.logical_and(indices[:, 0] > 0, indices[:, 0] < img_row)
-        mask = np.logical_and(mask, np.logical_and(indices[:, 1] > 0,
-                                                   indices[:, 1] < img_col))
+        mask = np.logical_and(mask, np.logical_and(indices[:, 1] > 0, indices[:, 1] < img_col))
         indices = indices[mask, :]
         bev_map[indices[:, 0], indices[:, 1]] = 1
         return bev_map

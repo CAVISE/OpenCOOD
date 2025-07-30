@@ -5,7 +5,7 @@ OpenCOOD support both **OPV2V (ICRA2022)** and **V2XSet (ECCV2022)** dataset.
 
 ## OPV2V
 All the data can be downloaded from [google drive](https://drive.google.com/drive/folders/1dkDeHlwOVbmgXcDazZvO6TFEZ6V_7WUu). If you have a good internet, you can directly
-download the complete large zip file such as `train.zip`. In case you suffer from downloading large fiels, we also split each data set into small chunks, which can be found 
+download the complete large zip file such as `train.zip`. In case you suffer from downloading large fiels, we also split each data set into small chunks, which can be found
 in the directory ending with `_chunks`, such as `train_chunks`. After downloading, please run the following command to each set to merge those chunks together:
 ```python
 cat train.zip.part* > train.zip
@@ -32,14 +32,14 @@ opv2v_data_dumping
 ├── train # data for training
 │   ├── 2021_08_22_21_41_24  # scenario folder
 │     ├── data_protocol.yaml # the simulation parameters used to collect the data in Carla
-│     └──  1732 # The connected automated vehicle's id 
+│     └──  1732 # The connected automated vehicle's id
 │       └── 00000.pcd - 00700.pcd # the point clouds data from timestamp 0 to 700
 │       ├── 00000.yaml - 00700.yaml # corresponding metadata for each timestamp
 │       ├── 00000_camera0.png - 00700_camera0.png # frontal camera images
 │       ├── 00000_camera1.png - 00700_camera1.png # right rear camera images
 │       ├── 00000_camera2.png - 00700_camera2.png # left rear camera images
 │       └── 00000_camera3.png - 00700_camera3.png # back camera images
-├── validate  
+├── validate
 ├── test
 ├── test_culvercity
 ```
@@ -62,19 +62,19 @@ In each agent folder, data across different timestamps will be saved. Those time
 as the prefix of the filenames (e.g., 00700.pcd). There are three types of files inside the agent folders: LiDAR point clouds (`.pcd` files), camera images (`.png` files), and metadata (`.yaml` files).
 
 #### 3.1 Lidar point cloud
-The LiDAR data is saved with Open3d package and has a postfix ".pcd" in the name. 
+The LiDAR data is saved with Open3d package and has a postfix ".pcd" in the name.
 
 #### 3.2 Camera images
 Each CAV is equipped with 4 RGB cameras (check https://mobility-lab.seas.ucla.edu/opv2v/ to see the mounted positions of these cameras) to capture the 360 degree of view of the surrounding scene.`camera0`, `camera1`, `camera2`, and `camera3` represent the front, right rear, left rear, and back cameras respectively.
 
 #### 3.3  Data Annotation
 All the metadata is saved in yaml files. It records the following important information at the current timestamp:
-- **ego information**:  Current ego pose with and without GPS noise under Carla world coordinates, ego speed in km/h, the LiDAR pose, and future planning trajectories. 
+- **ego information**:  Current ego pose with and without GPS noise under Carla world coordinates, ego speed in km/h, the LiDAR pose, and future planning trajectories.
 - **calibration**: The intrinsic matrix and extrinsic matrix from each camera to the LiDAR sensor.
-- **objects annotation**: The pose and velocity of each surrounding human driving vehicle that has at least one point hit by the agent's LiDAR sensor. See [data annotation section](data_annotation_tutorial.md) for more details. 
+- **objects annotation**: The pose and velocity of each surrounding human driving vehicle that has at least one point hit by the agent's LiDAR sensor. See [data annotation section](data_annotation_tutorial.md) for more details.
 
 ### 4. Data Collection Protocol
-Besides agent contents, every scenario database also has a yaml file named `data_protocol.yaml`. 
+Besides agent contents, every scenario database also has a yaml file named `data_protocol.yaml`.
 This yaml file records the simulation configuration to collect the current scenario. It is used to log replay
 the data and enable users to add/modify sensors for new tasks without changing the original events.
 
@@ -109,7 +109,7 @@ V2XSet's data label format is nearly the same with OPV2V, except:
 ---
 ## Adding Noise to OPV2V and V2XSet
 
-Cooperative perception faces the challenge of GPS error and communication delay. Our OpenCOOD allows users 
+Cooperative perception faces the challenge of GPS error and communication delay. Our OpenCOOD allows users
 to add realistic GPS error and communication delay to the dataset.
 
 To add noise to both OPV2V and V2XSet, just add the following parameters to the model yaml file:

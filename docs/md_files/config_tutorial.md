@@ -2,11 +2,11 @@
 
 ---
 We incorporate modular and inheritance design into the config system to enable users conveniently
-modify the model/training/inference parameters. Specifically, we use **yaml** files to configure all the 
+modify the model/training/inference parameters. Specifically, we use **yaml** files to configure all the
 important parameters.
 
 ### Config File Location
-All the yaml files should be saved in `opencood/hypes_yaml`, and users should use the `load_yaml()` function in [`opencood/hypes_yaml/yaml_utils.py`](https://github.com/DerrickXuNu/OpenCOOD/blob/main/opencood/hypes_yaml/yaml_utils.py#L8) to load the parameters into a dictionary. 
+All the yaml files should be saved in `opencood/hypes_yaml`, and users should use the `load_yaml()` function in [`opencood/hypes_yaml/yaml_utils.py`](https://github.com/DerrickXuNu/OpenCOOD/blob/31ba16025da27ffe4e336f011290dfbc66f9a1f1/opencood/hypes_yaml/yaml_utils.py#L14) to load the parameters into a dictionary.
 
 ### Config Name Style
 We follow the below style to name config yaml files.
@@ -17,7 +17,7 @@ We follow the below style to name config yaml files.
 ### A concrete example
 Now let's go through the `point_pillar_intermediate_fusion.yaml` as an example.
 ```yaml
-name: point_pillar_intermediate_fusion # this parameter together with the current timestamp will  define the name of the saved folder for the model. 
+name: point_pillar_intermediate_fusion # this parameter together with the current timestamp will  define the name of the saved folder for the model.
 root_dir: "v2xset/train" # this is where the training data locate. It can be either opv2v/train or v2xset/train
 validate_dir: "v2xset/validate" # during training, it defines the validation folder. during testing, it defines the testing folder path.
 
@@ -85,7 +85,7 @@ postprocess:
     feature_stride: 2 # the feature map is shrank twice compared the input voxel tensor
     num: &achor_num 2 # for each location in the feature map, 2 anchors will be generated
   target_args: # used to generate positive and negative samples for object detection
-    pos_threshold: 0.6 
+    pos_threshold: 0.6
     neg_threshold: 0.45
     score_threshold: 0.20
   order: 'hwl' # hwl or lwh
@@ -96,7 +96,7 @@ postprocess:
 model:
   core_method: point_pillar_opv2v # trainer will load the corresponding model python file with the same name
   args: # detailed parameters of the point pillar model
-    voxel_size: *voxel_size 
+    voxel_size: *voxel_size
     lidar_range: *cav_lidar
     anchor_number: *achor_num
 

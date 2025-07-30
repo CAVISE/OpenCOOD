@@ -1,5 +1,5 @@
 # This yaml only contains CoAlign's multiscale intermediate feature fusion.
-# If you want build the agent-object pose graph to correct pose error, 
+# If you want build the agent-object pose graph to correct pose error,
 # please refer to https://github.com/yifanlu0227/CoAlign
 
 name: point_pillar_coalign
@@ -103,4 +103,3 @@ lr_scheduler:
   core_method: multistep #step, multistep and Exponential support
   gamma: 0.1
   step_size: [10, 15]
-

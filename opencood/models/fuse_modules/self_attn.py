@@ -1,8 +1,3 @@
-# -*- coding: utf-8 -*-
-# Author: Hao Xiang <haxiang@g.ucla.edu>, Runsheng Xu <rxx3386@ucla.edu>
-# License: TDG-Attribution-NonCommercial-NoDistrib
-
-
 import numpy as np
 import torch
 import torch.nn as nn

@@ -12,7 +12,7 @@ All Rights Reserved 2018.
 #include "cuda_utils.h"
 
 
-__global__ void ball_query_kernel_fast(int b, int n, int m, float radius, int nsample, 
+__global__ void ball_query_kernel_fast(int b, int n, int m, float radius, int nsample,
     const float *__restrict__ new_xyz, const float *__restrict__ xyz, int *__restrict__ idx) {
     // new_xyz: (B, M, 3)
     // xyz: (B, N, 3)

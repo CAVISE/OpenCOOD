@@ -1,10 +1,4 @@
-# -*- coding: utf-8 -*-
-
-"""HDMap utilities
-"""
-
-# Author: Runsheng Xu <rxx3386@ucla.edu>
-# License: TDG-Attribution-NonCommercial-NoDistrib
+"""HDMap utilities"""
 
 import carla
 import numpy as np
@@ -12,9 +6,7 @@ import uuid
 import math
 from enum import IntEnum
 
-LABEL_TO_CARLA = {'building': carla.CityObjectLabel.Buildings,
-                  'terrain': carla.CityObjectLabel.Terrain,
-                  'sidewalk': carla.CityObjectLabel.Sidewalks}
+LABEL_TO_CARLA = {"building": carla.CityObjectLabel.Buildings, "terrain": carla.CityObjectLabel.Terrain, "sidewalk": carla.CityObjectLabel.Sidewalks}
 
 
 class InterpolationMethod(IntEnum):
@@ -41,7 +33,7 @@ def list_loc2array(list_location):
         Numpy array of shape (N, 3)
     """
     loc_array = np.zeros((len(list_location), 3))
-    for (i, carla_location) in enumerate(list_location):
+    for i, carla_location in enumerate(list_location):
         loc_array[i, 0] = carla_location.x
         loc_array[i, 1] = carla_location.y
         loc_array[i, 2] = carla_location.z
@@ -63,7 +55,7 @@ def list_wpt2array(list_wpt):
         Numpy array of shape (N, 3)
     """
     loc_array = np.zeros((len(list_wpt), 3))
-    for (i, carla_wpt) in enumerate(list_wpt):
+    for i, carla_wpt in enumerate(list_wpt):
         loc_array[i, 0] = carla_wpt.transform.location.x
         loc_array[i, 1] = carla_wpt.transform.location.y
         loc_array[i, 2] = carla_wpt.transform.location.z
@@ -83,13 +75,13 @@ def convert_tl_status(status):
     status_str : str
     """
     if status == carla.TrafficLightState.Red:
-        return 'red'
+        return "red"
     elif status == carla.TrafficLightState.Green:
-        return 'green'
+        return "green"
     elif status == carla.TrafficLightState.Yellow:
-        return 'yellow'
+        return "yellow"
     else:
-        return 'normal'
+        return "normal"
 
 
 def x_to_world_transformation(transform):
@@ -194,11 +186,12 @@ def retrieve_city_object_info(world, label_list):
         for obj in object_ins:
             obj_id = uuid.uuid4().hex[:6].upper()
 
-            obj_transform = carla.Transform(obj.location,
-                                            obj.rotation)
-            obj_loc = [obj.location.x,
-                       obj.location.y,
-                       obj.location.z, ]
+            obj_transform = carla.Transform(obj.location, obj.rotation)
+            obj_loc = [
+                obj.location.x,
+                obj.location.y,
+                obj.location.z,
+            ]
             obj_yaw = obj.rotation.yaw
 
             # calculate 4 corners
@@ -207,15 +200,13 @@ def retrieve_city_object_info(world, label_list):
                 carla.Location(x=-bb.x, y=-bb.y),
                 carla.Location(x=-bb.x, y=bb.y),
                 carla.Location(x=bb.x, y=bb.y),
-                carla.Location(x=bb.x, y=-bb.y)
+                carla.Location(x=bb.x, y=-bb.y),
             ]
 
             obj_transform.transform(corners)
             corners_reformat = [[x.x, x.y, x.z] for x in corners]
 
-            obj_info[obj_id] = {'location': obj_loc,
-                                'yaw': obj_yaw,
-                                'corners': corners_reformat}
+            obj_info[obj_id] = {"location": obj_loc, "yaw": obj_yaw, "corners": corners_reformat}
 
         city_object_info.update({label_name: obj_info})
 
@@ -245,10 +236,9 @@ def obj_in_range(center, radius, obj_info_dict):
     for obj_category, obj_contents in obj_info_dict.items():
         cur_objs = {}
         for obj_id, obj_info in obj_contents.items():
-            corners = obj_info['corners']
+            corners = obj_info["corners"]
             for corner in corners:
-                distance = math.sqrt((corner[0] - center.location.x) ** 2 + \
-                                     (corner[1] - center.location.y) ** 2)
+                distance = math.sqrt((corner[0] - center.location.x) ** 2 + (corner[1] - center.location.y) ** 2)
                 if distance < radius:
                     cur_objs.update({obj_id: obj_info})
                     break

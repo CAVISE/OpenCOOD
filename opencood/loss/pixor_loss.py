@@ -1,11 +1,3 @@
-
-# -*- coding: utf-8 -*-
-# Author: Hao Xiang <haxiang@g.ucla.edu>
-# License: TDG-Attribution-NonCommercial-NoDistrib
-
-
-from functools import reduce
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -18,10 +10,8 @@ class PixorLoss(nn.Module):
         self.beta = args["beta"]
         self.loss_dict = {}
 
-
     def dtype(self):
         return torch.float16
-
 
     def forward(self, output_dict, target_dict):
         """
@@ -50,45 +40,32 @@ class PixorLoss(nn.Module):
         w1 = (neg_count / (pos_count + neg_count)).to(dtype=self.dtype())
         w2 = (pos_count / (pos_count + neg_count)).to(dtype=self.dtype())
 
-
-
-
         weights = torch.ones_like(cls_preds.reshape(-1), dtype=self.dtype(), device=cls_preds.device)
         weights[cls_targets.reshape(-1) == 1] = w1
         weights[cls_targets.reshape(-1) == 0] = w2
-
-
-
-
 
         # cls_loss = F.binary_cross_entropy_with_logits(input=cls_preds.reshape(-1), target=cls_targets.reshape(-1), weight=weights,
         #                                               reduction='mean')
 
         print(f"cls_preds shape: {cls_preds.shape}")
         print(f"cls_targets shape: {cls_targets.shape}")
-       # print(f"pos_neg_weights shape: {pos_neg_weights.shape}")
+        # print(f"pos_neg_weights shape: {pos_neg_weights.shape}")
 
         if cls_targets.shape[2:] != cls_preds.shape[2:]:
-            cls_targets = F.interpolate(cls_targets, size=cls_preds.shape[2:], mode='bilinear', align_corners=False)
-           # pos_neg_weights = F.interpolate(pos_neg_weights, size=cls_preds.shape[2:], mode='bilinear', align_corners=False)
+            cls_targets = F.interpolate(cls_targets, size=cls_preds.shape[2:], mode="bilinear", align_corners=False)
+            # pos_neg_weights = F.interpolate(pos_neg_weights, size=cls_preds.shape[2:], mode='bilinear', align_corners=False)
             print(f"Resized cls_targets shape: {cls_targets.shape}")
-           # print(f"Resized pos_neg_weights shape: {pos_neg_weights.shape}")
+        # print(f"Resized pos_neg_weights shape: {pos_neg_weights.shape}")
 
-        cls_loss = F.binary_cross_entropy_with_logits(
-            input=cls_preds, target=cls_targets,
-            reduction='mean')
+        cls_loss = F.binary_cross_entropy_with_logits(input=cls_preds, target=cls_targets, reduction="mean")
         pos_pixels = cls_targets.sum()
 
-        loc_loss = F.smooth_l1_loss(cls_targets * loc_preds,
-                                    cls_targets * loc_targets,
-                                    reduction='sum')
+        loc_loss = F.smooth_l1_loss(cls_targets * loc_preds, cls_targets * loc_targets, reduction="sum")
         loc_loss = loc_loss / pos_pixels if pos_pixels > 0 else loc_loss
 
         total_loss = self.alpha * cls_loss + self.beta * loc_loss
 
-        self.loss_dict.update({'total_loss': total_loss,
-                               'reg_loss': loc_loss,
-                               'cls_loss': cls_loss})
+        self.loss_dict.update({"total_loss": total_loss, "reg_loss": loc_loss, "cls_loss": cls_loss})
 
         return total_loss
 
@@ -107,25 +84,23 @@ class PixorLoss(nn.Module):
         writer : SummaryWriter
             Used to visualize on tensorboard
         """
-        total_loss = self.loss_dict['total_loss']
-        reg_loss = self.loss_dict['reg_loss']
-        cls_loss = self.loss_dict['cls_loss']
+        total_loss = self.loss_dict["total_loss"]
+        reg_loss = self.loss_dict["reg_loss"]
+        cls_loss = self.loss_dict["cls_loss"]
 
         if pbar is None:
-            print("[epoch %d][%d/%d], || Loss: %.4f || Conf Loss: %.4f"
-                " || Loc Loss: %.4f" % (
-                    epoch, batch_id + 1, batch_len,
-                    total_loss.item(), cls_loss.item(), reg_loss.item()))
+            print(
+                "[epoch %d][%d/%d], || Loss: %.4f || Conf Loss: %.4f"
+                " || Loc Loss: %.4f" % (epoch, batch_id + 1, batch_len, total_loss.item(), cls_loss.item(), reg_loss.item())
+            )
         else:
-            pbar.set_description("[epoch %d][%d/%d], || Loss: %.4f || Conf Loss: %.4f"
-                  " || Loc Loss: %.4f" % (
-                      epoch, batch_id + 1, batch_len,
-                      total_loss.item(), cls_loss.item(), reg_loss.item()))
+            pbar.set_description(
+                "[epoch %d][%d/%d], || Loss: %.4f || Conf Loss: %.4f"
+                " || Loc Loss: %.4f" % (epoch, batch_id + 1, batch_len, total_loss.item(), cls_loss.item(), reg_loss.item())
+            )
 
-        writer.add_scalar('Regression_loss', reg_loss.item(),
-                          epoch * batch_len + batch_id)
-        writer.add_scalar('Confidence_loss', cls_loss.item(),
-                          epoch * batch_len + batch_id)
+        writer.add_scalar("Regression_loss", reg_loss.item(), epoch * batch_len + batch_id)
+        writer.add_scalar("Confidence_loss", cls_loss.item(), epoch * batch_len + batch_id)
 
 
 def test():

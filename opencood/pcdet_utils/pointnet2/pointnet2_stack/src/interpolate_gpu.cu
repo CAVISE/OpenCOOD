@@ -13,7 +13,7 @@ All Rights Reserved 2019-2020.
 #include "interpolate_gpu.h"
 
 
-__global__ void three_nn_kernel_stack(int batch_size, int N, int M, const float *unknown, 
+__global__ void three_nn_kernel_stack(int batch_size, int N, int M, const float *unknown,
     const int *unknown_batch_cnt, const float *known, const int *known_batch_cnt,
     float *dist2, int *idx) {
     // unknown: (N1 + N2 ..., 3)
@@ -59,23 +59,23 @@ __global__ void three_nn_kernel_stack(int batch_size, int N, int M, const float 
             best3 = best2; besti3 = besti2;
             best2 = best1; besti2 = besti1;
             best1 = d; besti1 = k;
-        } 
+        }
         else if (d < best2) {
             best3 = best2; besti3 = besti2;
             best2 = d; besti2 = k;
-        } 
+        }
         else if (d < best3) {
             best3 = d; besti3 = k;
         }
     }
     dist2[0] = best1; dist2[1] = best2; dist2[2] = best3;
-    idx[0] = besti1 + known_batch_start_idx; 
-    idx[1] = besti2 + known_batch_start_idx; 
+    idx[0] = besti1 + known_batch_start_idx;
+    idx[1] = besti2 + known_batch_start_idx;
     idx[2] = besti3 + known_batch_start_idx;
 }
 
 
-void three_nn_kernel_launcher_stack(int batch_size, int N, int M, const float *unknown, 
+void three_nn_kernel_launcher_stack(int batch_size, int N, int M, const float *unknown,
     const int *unknown_batch_cnt, const float *known, const int *known_batch_cnt,
     float *dist2, int *idx) {
     // unknown: (N1 + N2 ..., 3)
@@ -91,7 +91,7 @@ void three_nn_kernel_launcher_stack(int batch_size, int N, int M, const float *u
     dim3 threads(THREADS_PER_BLOCK);
 
     three_nn_kernel_stack<<<blocks, threads>>>(
-        batch_size, N, M, unknown, unknown_batch_cnt, 
+        batch_size, N, M, unknown, unknown_batch_cnt,
         known, known_batch_cnt, dist2, idx
     );
 
@@ -104,7 +104,7 @@ void three_nn_kernel_launcher_stack(int batch_size, int N, int M, const float *u
 
 
 
-__global__ void three_interpolate_kernel_stack(int N, int channels, const float *features, 
+__global__ void three_interpolate_kernel_stack(int N, int channels, const float *features,
     const int *idx, const float *weight, float *out) {
     // features: (M1 + M2 ..., C)
     // idx: [N1 + N2 ..., 3]
@@ -120,8 +120,8 @@ __global__ void three_interpolate_kernel_stack(int N, int channels, const float 
     idx += pt_idx * 3;
     out += pt_idx * channels + c_idx;
 
-    out[0] = weight[0] * features[idx[0] * channels + c_idx] + 
-        weight[1] * features[idx[1] * channels + c_idx] + 
+    out[0] = weight[0] * features[idx[0] * channels + c_idx] +
+        weight[1] * features[idx[1] * channels + c_idx] +
         weight[2] * features[idx[2] * channels + c_idx];
 }
 
@@ -148,7 +148,7 @@ void three_interpolate_kernel_launcher_stack(int N, int channels,
 }
 
 
-__global__ void three_interpolate_grad_kernel_stack(int N, int channels, const float *grad_out, 
+__global__ void three_interpolate_grad_kernel_stack(int N, int channels, const float *grad_out,
     const int *idx, const float *weight, float *grad_features) {
     // grad_out_tensor: (N1 + N2 ..., C)
     // idx_tensor: [N1 + N2 ..., 3]
@@ -163,7 +163,7 @@ __global__ void three_interpolate_grad_kernel_stack(int N, int channels, const f
     grad_out += pt_idx * channels + c_idx;
     weight += pt_idx * 3;
     idx += pt_idx * 3;
-    
+
     // printf("pt_idx=%d, c_idx=%d, idx=(%d, %d, %d), grad_out=%f\n", pt_idx, c_idx, idx[0], idx[1], idx[2], grad_out[0]);
 
     atomicAdd(grad_features + idx[0] * channels + c_idx, grad_out[0] * weight[0]);
@@ -172,7 +172,7 @@ __global__ void three_interpolate_grad_kernel_stack(int N, int channels, const f
 }
 
 
-void three_interpolate_grad_kernel_launcher_stack(int N, int channels, const float *grad_out, 
+void three_interpolate_grad_kernel_launcher_stack(int N, int channels, const float *grad_out,
     const int *idx, const float *weight, float *grad_features) {
     // grad_out_tensor: (N1 + N2 ..., C)
     // idx_tensor: [N1 + N2 ..., 3]

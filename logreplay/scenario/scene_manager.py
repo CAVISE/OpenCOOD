@@ -40,44 +40,36 @@ class SceneManager:
         self.cav_id_list = []
 
         # dumping related
-        self.output_root = os.path.join(scenario_params['output_dir'],
-                                        scene_name)
+        self.output_root = os.path.join(scenario_params["output_dir"], scene_name)
 
-        if 'seed' in collection_params['world']:
-            np.random.seed(collection_params['world']['seed'])
-            random.seed(collection_params['world']['seed'])
+        if "seed" in collection_params["world"]:
+            np.random.seed(collection_params["world"]["seed"])
+            random.seed(collection_params["world"]["seed"])
 
         # at least 1 cav should show up
-        cav_list = sorted([x for x in os.listdir(folder)
-                           if os.path.isdir(
-                os.path.join(folder, x))])
+        cav_list = sorted([x for x in os.listdir(folder) if os.path.isdir(os.path.join(folder, x))])
         assert len(cav_list) > 0
 
         self.database = OrderedDict()
         # we want to save timestamp as the parent keys for cavs
         cav_sample = os.path.join(folder, cav_list[0])
 
-        yaml_files = \
-            sorted([os.path.join(cav_sample, x)
-                    for x in os.listdir(cav_sample) if
-                    x.endswith('.yaml') and 'additional' not in x])
+        yaml_files = sorted([os.path.join(cav_sample, x) for x in os.listdir(cav_sample) if x.endswith(".yaml") and "additional" not in x])
         self.timestamps = self.extract_timestamps(yaml_files)
 
         # loop over all timestamps
         for timestamp in self.timestamps:
             self.database[timestamp] = OrderedDict()
             # loop over all cavs
-            for (j, cav_id) in enumerate(cav_list):
+            for j, cav_id in enumerate(cav_list):
                 if cav_id not in self.cav_id_list:
                     self.cav_id_list.append(str(cav_id))
 
                 self.database[timestamp][cav_id] = OrderedDict()
                 cav_path = os.path.join(folder, cav_id)
 
-                yaml_file = os.path.join(cav_path,
-                                         timestamp + '.yaml')
-                self.database[timestamp][cav_id]['yaml'] = \
-                    yaml_file
+                yaml_file = os.path.join(cav_path, timestamp + ".yaml")
+                self.database[timestamp][cav_id]["yaml"] = yaml_file
 
         # this is used to dynamically save all information of the objects
         self.veh_dict = OrderedDict()
@@ -90,32 +82,31 @@ class SceneManager:
         """
         Connect to the carla simulator for log replay.
         """
-        simulation_config = self.collection_params['world']
+        simulation_config = self.collection_params["world"]
 
         # simulation sync mode time step
-        fixed_delta_seconds = simulation_config['fixed_delta_seconds']
-        weather_config = simulation_config[
-            'weather'] if "weather" in simulation_config else None
+        fixed_delta_seconds = simulation_config["fixed_delta_seconds"]
+        weather_config = simulation_config["weather"] if "weather" in simulation_config else None
 
         # setup the carla client
-        self.client = \
-            carla.Client('localhost', simulation_config['client_port'])
+        self.client = carla.Client("localhost", simulation_config["client_port"])
         self.client.set_timeout(10.0)
 
         # load the map
-        if self.town_name != 'Culver_City':
+        if self.town_name != "Culver_City":
             try:
                 self.world = self.client.load_world(self.town_name)
             except RuntimeError:
                 print(
                     f"{bcolors.FAIL} %s is not found in your CARLA repo! "
                     f"Please download all town maps to your CARLA "
-                    f"repo!{bcolors.ENDC}" % self.town_name)
+                    f"repo!{bcolors.ENDC}" % self.town_name
+                )
         else:
             self.world = self.client.get_world()
 
         if not self.world:
-            sys.exit('World loading failed')
+            sys.exit("World loading failed")
 
         # setup the new setting
         self.origin_settings = self.world.get_settings()
@@ -134,10 +125,7 @@ class SceneManager:
         # spectator
         self.spectator = self.world.get_spectator()
         # hd map manager per scene
-        self.map_manager = MapManager(self.world,
-                                      self.scenario_params['map'],
-                                      self.output_root,
-                                      self.scene_name)
+        self.map_manager = MapManager(self.world, self.scenario_params["map"], self.output_root, self.scene_name)
 
     def tick(self):
         """
@@ -150,46 +138,31 @@ class SceneManager:
         cur_database = self.database[cur_timestamp]
 
         for i, (cav_id, cav_yml) in enumerate(cur_database.items()):
-            cav_content = load_yaml(cav_yml['yaml'])
+            cav_content = load_yaml(cav_yml["yaml"])
             if cav_id not in self.veh_dict:
                 self.spawn_cav(cav_id, cav_content, cur_timestamp)
             else:
-                self.move_vehicle(cav_id,
-                                  cur_timestamp,
-                                  self.structure_transform_cav(
-                                      (cav_content['true_ego_pos'])))
+                self.move_vehicle(cav_id, cur_timestamp, self.structure_transform_cav((cav_content["true_ego_pos"])))
 
-            self.veh_dict[cav_id]['cav'] = True
+            self.veh_dict[cav_id]["cav"] = True
             # spawn the sensor on each cav
-            if 'sensor_manager' not in self.veh_dict[cav_id]:
-                self.veh_dict[cav_id]['sensor_manager'] = \
-                    SensorManager(cav_id, self.veh_dict[cav_id],
-                                  self.world, self.scenario_params['sensor'],
-                                  self.output_root)
+            if "sensor_manager" not in self.veh_dict[cav_id]:
+                self.veh_dict[cav_id]["sensor_manager"] = SensorManager(
+                    cav_id, self.veh_dict[cav_id], self.world, self.scenario_params["sensor"], self.output_root
+                )
 
             # set the spectator to the first cav
             if i == 0:
-                transform = self.structure_transform_cav(
-                    cav_content['true_ego_pos'])
-                self.spectator.set_transform(
-                    carla.Transform(transform.location +
-                                    carla.Location(
-                                        z=70),
-                                    carla.Rotation(
-                                        pitch=-90
-                                    )))
+                transform = self.structure_transform_cav(cav_content["true_ego_pos"])
+                self.spectator.set_transform(carla.Transform(transform.location + carla.Location(z=70), carla.Rotation(pitch=-90)))
 
-            for bg_veh_id, bg_veh_content in cav_content['vehicles'].items():
+            for bg_veh_id, bg_veh_content in cav_content["vehicles"].items():
                 if str(bg_veh_id) not in self.veh_dict:
-                    self.spawn_bg_vehicles(bg_veh_id,
-                                           bg_veh_content,
-                                           cur_timestamp)
+                    self.spawn_bg_vehicles(bg_veh_id, bg_veh_content, cur_timestamp)
                 else:
-                    self.move_vehicle(str(bg_veh_id),
-                                      cur_timestamp,
-                                      self.structure_transform_bg_veh(
-                                          bg_veh_content['location'],
-                                          bg_veh_content['angle']))
+                    self.move_vehicle(
+                        str(bg_veh_id), cur_timestamp, self.structure_transform_bg_veh(bg_veh_content["location"], bg_veh_content["angle"])
+                    )
         # remove the vehicles that are not in any cav's scope
         self.destroy_vehicle(cur_timestamp)
 
@@ -210,13 +183,13 @@ class SceneManager:
         ----------
         """
         for veh_id, veh_content in self.veh_dict.items():
-            if 'cav' in veh_content:
+            if "cav" in veh_content:
                 self.map_manager.run_step(veh_id, veh_content, self.veh_dict)
 
     def sensor_dumping(self, cur_timestamp):
         for veh_id, veh_content in self.veh_dict.items():
-            if 'sensor_manager' in veh_content:
-                veh_content['sensor_manager'].run_step(cur_timestamp)
+            if "sensor_manager" in veh_content:
+                veh_content["sensor_manager"].run_step(cur_timestamp)
 
     def spawn_cav(self, cav_id, cav_content, cur_timestamp):
         """
@@ -236,36 +209,38 @@ class SceneManager:
         """
 
         # cav always use lincoln
-        model = 'vehicle.lincoln.mkz_2017'
+        model = "vehicle.lincoln.mkz_2017"
 
         # retrive the blueprint library
         blueprint_library = self.world.get_blueprint_library()
         cav_bp = blueprint_library.find(model)
         # cav is always green
-        color = '0, 0, 255'
-        cav_bp.set_attribute('color', color)
+        color = "0, 0, 255"
+        cav_bp.set_attribute("color", color)
 
-        cur_pose = cav_content['true_ego_pos']
+        cur_pose = cav_content["true_ego_pos"]
         # convert to carla needed format
         cur_pose = self.structure_transform_cav(cur_pose)
 
         # spawn the vehicle
-        vehicle = \
-            self.world.try_spawn_actor(cav_bp, cur_pose)
+        vehicle = self.world.try_spawn_actor(cav_bp, cur_pose)
 
         while not vehicle:
             cur_pose.location.z += 0.01
-            vehicle = \
-                self.world.try_spawn_actor(cav_bp, cur_pose)
+            vehicle = self.world.try_spawn_actor(cav_bp, cur_pose)
 
-        self.veh_dict.update({str(cav_id): {
-            'cur_pose': cur_pose,
-            'model': model,
-            'color': color,
-            'actor_id': vehicle.id,
-            'actor': vehicle,
-            'cur_count': cur_timestamp
-        }})
+        self.veh_dict.update(
+            {
+                str(cav_id): {
+                    "cur_pose": cur_pose,
+                    "model": model,
+                    "color": color,
+                    "actor_id": vehicle.id,
+                    "actor": vehicle,
+                    "cur_count": cur_timestamp,
+                }
+            }
+        )
 
     def spawn_bg_vehicles(self, bg_veh_id, bg_veh_content, cur_timestamp):
         """
@@ -284,40 +259,40 @@ class SceneManager:
         # retrieve the blueprint library
         blueprint_library = self.world.get_blueprint_library()
 
-        cur_pose = self.structure_transform_bg_veh(bg_veh_content['location'],
-                                                   bg_veh_content['angle'])
+        cur_pose = self.structure_transform_bg_veh(bg_veh_content["location"], bg_veh_content["angle"])
         if str(bg_veh_id) in self.cav_id_list:
-            model = 'vehicle.lincoln.mkz_2017'
+            model = "vehicle.lincoln.mkz_2017"
             veh_bp = blueprint_library.find(model)
-            color = '0, 0, 255'
+            color = "0, 0, 255"
         else:
-            model = find_blue_print(bg_veh_content['extent'])
+            model = find_blue_print(bg_veh_content["extent"])
             if not model:
-                print('model net found for %s' % bg_veh_id)
+                print("model net found for %s" % bg_veh_id)
             veh_bp = blueprint_library.find(model)
 
-            color = random.choice(
-                veh_bp.get_attribute('color').recommended_values)
+            color = random.choice(veh_bp.get_attribute("color").recommended_values)
 
-        veh_bp.set_attribute('color', color)
+        veh_bp.set_attribute("color", color)
 
         # spawn the vehicle
-        vehicle = \
-            self.world.try_spawn_actor(veh_bp, cur_pose)
+        vehicle = self.world.try_spawn_actor(veh_bp, cur_pose)
 
         while not vehicle:
             cur_pose.location.z += 0.01
-            vehicle = \
-                self.world.try_spawn_actor(veh_bp, cur_pose)
+            vehicle = self.world.try_spawn_actor(veh_bp, cur_pose)
 
-        self.veh_dict.update({str(bg_veh_id): {
-            'cur_pose': cur_pose,
-            'model': model,
-            'color': color,
-            'actor_id': vehicle.id,
-            'actor': vehicle,
-            'cur_count': cur_timestamp
-        }})
+        self.veh_dict.update(
+            {
+                str(bg_veh_id): {
+                    "cur_pose": cur_pose,
+                    "model": model,
+                    "color": color,
+                    "actor_id": vehicle.id,
+                    "actor": vehicle,
+                    "cur_count": cur_timestamp,
+                }
+            }
+        )
 
     def move_vehicle(self, veh_id, cur_timestamp, transform):
         """
@@ -335,12 +310,12 @@ class SceneManager:
             Current pose/
         """
         # this represent this vehicle is already moved in this round
-        if self.veh_dict[veh_id]['cur_count'] == cur_timestamp:
+        if self.veh_dict[veh_id]["cur_count"] == cur_timestamp:
             return
 
-        self.veh_dict[veh_id]['actor'].set_transform(transform)
-        self.veh_dict[veh_id]['cur_count'] = cur_timestamp
-        self.veh_dict[veh_id]['cur_pose'] = transform
+        self.veh_dict[veh_id]["actor"].set_transform(transform)
+        self.veh_dict[veh_id]["cur_count"] = cur_timestamp
+        self.veh_dict[veh_id]["cur_pose"] = transform
 
     def close(self):
         self.world.apply_settings(self.origin_settings)
@@ -352,8 +327,8 @@ class SceneManager:
 
     def sensor_destory(self):
         for veh_id, veh_content in self.veh_dict.items():
-            if 'sensor_manager' in veh_content:
-                veh_content['sensor_manager'].destroy()
+            if "sensor_manager" in veh_content:
+                veh_content["sensor_manager"].destroy()
 
     def destroy_vehicle(self, cur_timestamp):
         """
@@ -361,8 +336,8 @@ class SceneManager:
         """
         destroy_list = []
         for veh_id, veh_content in self.veh_dict.items():
-            if veh_content['cur_count'] != cur_timestamp:
-                veh_content['actor'].destroy()
+            if veh_content["cur_count"] != cur_timestamp:
+                veh_content["actor"].destroy()
                 destroy_list.append(veh_id)
 
         for veh_id in destroy_list:
@@ -381,12 +356,7 @@ class SceneManager:
         -------
         carla.Transform
         """
-        cur_pose = carla.Transform(carla.Location(x=pose[0],
-                                                  y=pose[1],
-                                                  z=pose[2]),
-                                   carla.Rotation(roll=pose[3],
-                                                  yaw=pose[4],
-                                                  pitch=pose[5]))
+        cur_pose = carla.Transform(carla.Location(x=pose[0], y=pose[1], z=pose[2]), carla.Rotation(roll=pose[3], yaw=pose[4], pitch=pose[5]))
 
         return cur_pose
 
@@ -403,12 +373,9 @@ class SceneManager:
         -------
         carla.Transform
         """
-        cur_pose = carla.Transform(carla.Location(x=location[0],
-                                                  y=location[1],
-                                                  z=location[2]),
-                                   carla.Rotation(roll=rotation[0],
-                                                  yaw=rotation[1],
-                                                  pitch=rotation[2]))
+        cur_pose = carla.Transform(
+            carla.Location(x=location[0], y=location[1], z=location[2]), carla.Rotation(roll=rotation[0], yaw=rotation[1], pitch=rotation[2])
+        )
 
         return cur_pose
 
@@ -430,9 +397,9 @@ class SceneManager:
         timestamps = []
 
         for file in yaml_files:
-            res = file.split('/')[-1]
+            res = file.split("/")[-1]
 
-            timestamp = res.replace('.yaml', '')
+            timestamp = res.replace(".yaml", "")
             timestamps.append(timestamp)
 
         return timestamps
@@ -452,14 +419,14 @@ class SceneManager:
         The CARLA weather setting.
         """
         weather = carla.WeatherParameters(
-            sun_altitude_angle=weather_settings['sun_altitude_angle'],
-            cloudiness=weather_settings['cloudiness'],
-            precipitation=weather_settings['precipitation'],
-            precipitation_deposits=weather_settings['precipitation_deposits'],
-            wind_intensity=weather_settings['wind_intensity'],
-            fog_density=weather_settings['fog_density'],
-            fog_distance=weather_settings['fog_distance'],
-            fog_falloff=weather_settings['fog_falloff'],
-            wetness=weather_settings['wetness']
+            sun_altitude_angle=weather_settings["sun_altitude_angle"],
+            cloudiness=weather_settings["cloudiness"],
+            precipitation=weather_settings["precipitation"],
+            precipitation_deposits=weather_settings["precipitation_deposits"],
+            wind_intensity=weather_settings["wind_intensity"],
+            fog_density=weather_settings["fog_density"],
+            fog_distance=weather_settings["fog_distance"],
+            fog_falloff=weather_settings["fog_falloff"],
+            wetness=weather_settings["wetness"],
         )
         return weather

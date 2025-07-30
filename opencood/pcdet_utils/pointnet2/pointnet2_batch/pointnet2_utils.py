@@ -4,8 +4,7 @@ import torch
 import torch.nn as nn
 from torch.autograd import Function, Variable
 
-from opencood.pcdet_utils.pointnet2.pointnet2_batch import \
-    pointnet2_batch_cuda as pointnet2
+from opencood.pcdet_utils.pointnet2.pointnet2_batch import pointnet2_batch_cuda as pointnet2
 
 
 class FurthestPointSampling(Function):
@@ -38,7 +37,6 @@ furthest_point_sample = FurthestPointSampling.apply
 
 
 class GatherOperation(Function):
-
     @staticmethod
     def forward(ctx, features: torch.Tensor, idx: torch.Tensor) -> torch.Tensor:
         """
@@ -75,7 +73,6 @@ gather_operation = GatherOperation.apply
 
 
 class ThreeNN(Function):
-
     @staticmethod
     def forward(ctx, unknown: torch.Tensor, known: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """
@@ -107,7 +104,6 @@ three_nn = ThreeNN.apply
 
 
 class ThreeInterpolate(Function):
-
     @staticmethod
     def forward(ctx, features: torch.Tensor, idx: torch.Tensor, weight: torch.Tensor) -> torch.Tensor:
         """
@@ -155,7 +151,6 @@ three_interpolate = ThreeInterpolate.apply
 
 
 class GroupingOperation(Function):
-
     @staticmethod
     def forward(ctx, features: torch.Tensor, idx: torch.Tensor) -> torch.Tensor:
         """
@@ -199,7 +194,6 @@ grouping_operation = GroupingOperation.apply
 
 
 class BallQuery(Function):
-
     @staticmethod
     def forward(ctx, radius: float, nsample: int, xyz: torch.Tensor, new_xyz: torch.Tensor) -> torch.Tensor:
         """

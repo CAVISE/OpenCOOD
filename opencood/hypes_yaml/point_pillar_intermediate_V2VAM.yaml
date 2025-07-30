@@ -1,5 +1,5 @@
 name: point_pillar_intermediate_V2VAM_nocompressionV2
-sub_name: 
+sub_name:
 root_dir: "opv2v_data_dumping/train"
 validate_dir: "opv2v_data_dumping/validate"
 
@@ -105,4 +105,3 @@ lr_scheduler:
   core_method: multistep #step, multistep and Exponential support
   gamma: 0.1
   step_size: [15,40,60]
-
