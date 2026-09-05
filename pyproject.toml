@@ -80,3 +80,38 @@ docstring-code-format = true
 # This only has an effect when the `docstring-code-format` setting is
 # enabled.
 docstring-code-line-length = "dynamic"
+
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true
+check_untyped_defs = true
+warn_unused_ignores = true
+pretty = true
+exclude_gitignore = true
+exclude = [
+    "(^|/)(build|docs|logreplay|test|venv|\\.venv)(/|$)",
+    "^setup\\.py$",
+    "^opencood/(data_utils|loss|pcdet_utils)(/|$)",
+    "^opencood/models/fuse_modules/(mswin|swap_fusion_modules)\\.py$",
+    "^opencood/models/(pixor_intermediate|voxel_net)\\.py$",
+    "^opencood/tools/debug_utils\\.py$",
+    "^opencood/visualization/simple_vis\\.py$",
+]
+
+[tool.deadcode]
+exclude = [
+    ".git",
+    ".mypy_cache",
+    ".ruff_cache",
+    ".venv",
+    "build",
+    "docs",
+    "test",
+    "venv",
+]
+ignore-names = [
+    "WARNING",
+    "get_outgoing_payloads",
+    "insert_received_payloads",
+    "prepare_transmission_payloads",
+]
