@@ -56,7 +56,9 @@ def test_voxel_sender_decodes_candidates_without_nms_or_projection(monkeypatch):
         output["rm"],
         cav_content["anchor_box"],
     )
-    corners.assert_called_once_with(decoded_boxes[0], order="hwl")
+    corners.assert_called_once()
+    torch.testing.assert_close(corners.call_args.args[0], decoded_boxes[0])
+    assert corners.call_args.kwargs == {"order": "hwl"}
 
 
 def test_bev_sender_decodes_only_above_threshold_candidates():
