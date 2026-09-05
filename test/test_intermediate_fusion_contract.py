@@ -26,22 +26,22 @@ from opencood.models.communication_adapters import (  # noqa: E402
 )
 
 
-class RecordingPayloadHandler:
+class RecordingCommunicationInterface:
     """Collect payloads published by a dataset extraction call."""
 
     def __init__(self) -> None:
         self.published = []
 
-    def set_opencda_payload(self, cav_id, module_name, payload) -> None:
+    def publish(self, cav_id, module_name, payload) -> None:
         self.published.append((cav_id, module_name, payload))
 
 
 def test_extract_data_requires_adapter_to_build_learned_payloads():
     dataset = IntermediateFusionDataset.__new__(IntermediateFusionDataset)
     dataset.cur_ego_pose_flag = True
-    dataset.module_name = "OpenCOOD.IntermediateFusionDataset"
+    dataset.module_name = "opencood.IntermediateFusionDataset"
     dataset.model_name = "point_pillar_fcooper"
-    dataset.payload_handler = RecordingPayloadHandler()
+    dataset.communication_interface = RecordingCommunicationInterface()
     dataset.retrieve_base_data = MagicMock(
         return_value=OrderedDict(
             {
@@ -70,12 +70,12 @@ def test_extract_data_requires_adapter_to_build_learned_payloads():
     dataset.extract_data(7, payload_builder)
 
     assert payload_builder.call_count == 2
-    assert [entry[0] for entry in dataset.payload_handler.published] == [
+    assert [entry[0] for entry in dataset.communication_interface.published] == [
         "cav-1",
         "cav-2",
     ]
-    assert dataset.payload_handler.published[0][2] == (inference_inputs[0], None)
-    assert dataset.payload_handler.published[1][2] == (inference_inputs[1], None)
+    assert dataset.communication_interface.published[0][2] == (inference_inputs[0], None)
+    assert dataset.communication_interface.published[1][2] == (inference_inputs[1], None)
 
 
 def test_message_assembly_keeps_only_delivered_learned_features():
@@ -86,11 +86,10 @@ def test_message_assembly_keeps_only_delivered_learned_features():
         "spatial_features": np.full((1, 2, 2, 2), 2.0, dtype=np.float32),
         "metadata": None,
     }
-    dataset.payload_handler = MagicMock()
-    dataset.payload_handler.current_artery_payload = {"cav-1": object()}
+    dataset.communication_interface = MagicMock()
     delivered_payload = object()
-    dataset.payload_handler.get_artery_payload.side_effect = lambda _receiver, sender, _module: delivered_payload if sender == "cav-2" else None
-    dataset.module_name = "OpenCOOD.IntermediateFusionDataset"
+    dataset.communication_interface.receive.side_effect = lambda _receiver, sender, _module: delivered_payload if sender == "cav-2" else None
+    dataset.module_name = "opencood.IntermediateFusionDataset"
     dataset.get_item_single_car = MagicMock(return_value={"inference_input": object()})
     dataset.build_model_metadata = MagicMock(return_value=None)
     base_data = OrderedDict(

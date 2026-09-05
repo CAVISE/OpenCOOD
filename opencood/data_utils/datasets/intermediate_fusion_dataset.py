@@ -45,7 +45,7 @@ class IntermediateFusionDataset(basedataset.BaseDataset):
     deep features to ego.
     """
 
-    def __init__(self, params, visualize, train=True, payload_handler=None):
+    def __init__(self, params, visualize, train=True, communication_interface=None):
         super(IntermediateFusionDataset, self).__init__(params, visualize, train)
 
         # if project first, cav's lidar will first be projected to
@@ -65,8 +65,8 @@ class IntermediateFusionDataset(basedataset.BaseDataset):
         self.pre_processor = build_preprocessor(params["preprocess"], train)
         self.post_processor = post_processor.build_postprocessor(params["postprocess"], train)
 
-        self.payload_handler = payload_handler
-        self.module_name = "OpenCOOD.IntermediateFusionDataset"
+        self.communication_interface = communication_interface
+        self.module_name = "opencood.IntermediateFusionDataset"
         self.model_name = params["model"]["core_method"]
 
     def extract_data(
@@ -91,14 +91,14 @@ class IntermediateFusionDataset(basedataset.BaseDataset):
         base_data_dict = self.retrieve_base_data(idx, cur_ego_pose_flag=self.cur_ego_pose_flag)
         _, ego_lidar_pose = self.__find_ego_vehicle(base_data_dict)
 
-        if self.payload_handler is not None:
+        if self.communication_interface is not None:
             for cav_id, selected_cav_base in base_data_dict.items():
                 selected_cav_processed = self.get_item_single_car(selected_cav_base, ego_lidar_pose)
                 payload = agent_payload_builder(
                     selected_cav_processed["inference_input"],
                     self.build_model_metadata(cav_id, selected_cav_base, idx),
                 )
-                self.payload_handler.set_opencda_payload(cav_id, self.module_name, payload)
+                self.communication_interface.publish(cav_id, self.module_name, payload)
 
     def build_model_metadata(
         self,
@@ -379,23 +379,22 @@ class IntermediateFusionDataset(basedataset.BaseDataset):
         ]
         metadata = [self.build_model_metadata(ego_id, ego_cav_base, receive_frame)]
 
-        if ego_id in self.payload_handler.current_artery_payload:
-            for cav_id in base_data_dict:
-                if cav_id == ego_id:
-                    continue
-                raw_payload = self.payload_handler.get_artery_payload(
-                    ego_id,
-                    cav_id,
-                    self.module_name,
-                )
-                if raw_payload is None:
-                    continue
-                decoded = self.communication_adapter.decode_received_payload(
-                    raw_payload,
-                    ego_lidar_pose,
-                )
-                metadata.append(decoded.pop("metadata"))
-                features.append(decoded)
+        for cav_id in base_data_dict:
+            if cav_id == ego_id:
+                continue
+            raw_payload = self.communication_interface.receive(
+                ego_id,
+                cav_id,
+                self.module_name,
+            )
+            if raw_payload is None:
+                continue
+            decoded = self.communication_adapter.decode_received_payload(
+                raw_payload,
+                ego_lidar_pose,
+            )
+            metadata.append(decoded.pop("metadata"))
+            features.append(decoded)
 
         return {
             "intermediate_features": features,
@@ -523,7 +522,7 @@ class IntermediateFusionDataset(basedataset.BaseDataset):
         ego_id, ego_lidar_pose = self.__find_ego_vehicle(base_data_dict)
         visualization_base_data_dict = self.__retrieve_visualization_base_data(idx) if self.visualize else base_data_dict
 
-        if self.payload_handler is not None:
+        if self.communication_interface is not None:
             inference_input = self.__process_with_messages(ego_id, ego_lidar_pose, base_data_dict, idx)
         else:
             inference_input = self.__process_without_messages(ego_id, ego_lidar_pose, base_data_dict, idx)

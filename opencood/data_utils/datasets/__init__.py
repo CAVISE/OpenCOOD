@@ -41,10 +41,10 @@ def __getattr__(name):  # Noqa: DC02
     return _load_dataset_class(name)
 
 
-def build_dataset(dataset_cfg, visualize=False, train=True, payload_handler=None):
+def build_dataset(dataset_cfg, visualize=False, train=True, communication_interface=None):
     dataset_name = dataset_cfg["fusion"]["core_method"]
     error_message = f"{dataset_name} is not found. Please add the dataset to opencood.data_utils.datasets"
     assert dataset_name in _DATASET_REGISTRY, error_message
 
     dataset_class = _load_dataset_class(dataset_name)
-    return dataset_class(params=dataset_cfg, visualize=visualize, train=train, payload_handler=payload_handler)
+    return dataset_class(params=dataset_cfg, visualize=visualize, train=train, communication_interface=communication_interface)

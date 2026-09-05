@@ -34,7 +34,7 @@ class IntermediateFusionDatasetV2(basedataset.BaseDataset):
     deep features to ego.
     """
 
-    def __init__(self, params, visualize, train=True, payload_handler=None):
+    def __init__(self, params, visualize, train=True, communication_interface=None):
         super(IntermediateFusionDatasetV2, self).__init__(params, visualize, train)
         self.pre_processor = build_preprocessor(params["preprocess"], train)
         self.post_processor = post_processor.build_postprocessor(params["postprocess"], train)
@@ -46,8 +46,8 @@ class IntermediateFusionDatasetV2(basedataset.BaseDataset):
         else:
             self.cur_ego_pose_flag = True
 
-        self.payload_handler = payload_handler
-        self.module_name = "OpenCOOD.IntermediateFusionDatasetV2"
+        self.communication_interface = communication_interface
+        self.module_name = "opencood.IntermediateFusionDatasetV2"
 
     def extract_data(
         self,
@@ -73,7 +73,7 @@ class IntermediateFusionDatasetV2(basedataset.BaseDataset):
         """
         base_data_dict = self.retrieve_base_data(idx, cur_ego_pose_flag=self.cur_ego_pose_flag)
 
-        if self.payload_handler is not None:
+        if self.communication_interface is not None:
             if agent_payload_builder is None:
                 raise NotImplementedError("IntermediateFusionDatasetV2 requires a model-specific communication adapter")
             for cav_id, selected_cav_base in base_data_dict.items():
@@ -84,7 +84,7 @@ class IntermediateFusionDatasetV2(basedataset.BaseDataset):
                     capture_frame=int(idx - selected_cav_base["time_delay"]),
                 )
                 payload = agent_payload_builder(selected_cav_processed, metadata)
-                self.payload_handler.set_opencda_payload(cav_id, self.module_name, payload)
+                self.communication_interface.publish(cav_id, self.module_name, payload)
 
     def __find_ego_vehicle(self, base_data_dict):
         ego_id = -1
@@ -195,14 +195,13 @@ class IntermediateFusionDatasetV2(basedataset.BaseDataset):
         if self.communication_adapter is None:
             raise RuntimeError("IntermediateFusionDatasetV2 requires an attached communication adapter")
 
-        if ego_id in self.payload_handler.current_artery_payload:
-            for cav_id, _ in base_data_dict.items():
-                if cav_id == ego_id:
-                    continue
-                raw_payload = self.payload_handler.get_artery_payload(ego_id, cav_id, self.module_name)
-                if raw_payload is None:
-                    continue
-                remote_agent_outputs.append(self.communication_adapter.decode_received_payload(raw_payload, ego_lidar_pose))
+        for cav_id, _ in base_data_dict.items():
+            if cav_id == ego_id:
+                continue
+            raw_payload = self.communication_interface.receive(ego_id, cav_id, self.module_name)
+            if raw_payload is None:
+                continue
+            remote_agent_outputs.append(self.communication_adapter.decode_received_payload(raw_payload, ego_lidar_pose))
 
         return {
             "processed_features": processed_features,
@@ -239,7 +238,7 @@ class IntermediateFusionDatasetV2(basedataset.BaseDataset):
             "object_ids": object_ids,
             "anchor_box": anchor_box,
         }
-        if self.payload_handler is None:
+        if self.communication_interface is None:
             supervision["stage2_label"] = self.post_processor.generate_label(
                 gt_box_center=object_bbx_center,
                 anchors=anchor_box,
@@ -289,7 +288,7 @@ class IntermediateFusionDatasetV2(basedataset.BaseDataset):
         visualization_base_data_dict = self.__retrieve_visualization_base_data(idx) if self.visualize else base_data_dict
         _, visualization_ego_lidar_pose = self.__find_ego_vehicle(visualization_base_data_dict)
 
-        if self.payload_handler is not None:
+        if self.communication_interface is not None:
             data = self.__process_with_messages(
                 ego_id,
                 ego_lidar_pose,
