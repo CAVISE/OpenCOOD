@@ -1,0 +1,22 @@
+name: OpenCOOD tests
+
+on:
+  workflow_dispatch:
+  pull_request:
+
+jobs:
+  pytest:
+    uses: CAVISE/pipelines/.github/workflows/python-pytest.yml@main
+    with:
+      python-versions: '["3.12"]'
+      fail-fast: false
+      cache-dependency-path: |
+        .github/workflows/requirements/requirements-ci.txt
+        requirements.txt
+        pyproject.toml
+      requirements-file: .github/workflows/requirements/requirements-ci.txt
+      matplotlib-backend: Agg
+      pytest-maxfail: 0
+      report-dir: reports
+      upload-artifact: true
+      artifact-name-prefix: pytest-junit
