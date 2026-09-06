@@ -18,7 +18,6 @@ from opencood.models.communication_adapters import PoseFrameMetadata
 from opencood.data_utils.pre_processor import build_preprocessor
 from opencood.utils.pcd_utils import pcd_to_np, mask_points_by_range, mask_ego_points, shuffle_points
 from opencood.utils.transformation_utils import x1_to_x2
-from opencood.pcdet_utils.roiaware_pool3d.roiaware_pool3d_utils import points_in_boxes_cpu
 
 
 # TODO: The fpvrcnn_intermediate_fusion model has an issue with weights on this dataset
@@ -324,6 +323,8 @@ class IntermediateFusionDatasetV2(basedataset.BaseDataset):
         )
 
         if "stage2_label" in local_supervision:
+            from opencood.pcdet_utils.roiaware_pool3d.roiaware_pool3d_utils import points_in_boxes_cpu
+
             label_dict_no_coop = []
             for boxes, points in zip(data["object_stack"], data["model_lidar_stack"]):
                 point_indices = points_in_boxes_cpu(points[:, :3], boxes[:, [0, 1, 2, 5, 4, 3, 6]])

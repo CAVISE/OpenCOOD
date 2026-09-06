@@ -3,15 +3,15 @@ import copy
 import torch.nn as nn
 import torch
 import numpy as np
-from opencood.pcdet_utils.pointnet2.pointnet2_stack import pointnet2_modules as pointnet2_stack_modules
 from opencood.utils import common_utils
-from opencood.pcdet_utils.iou3d_nms.iou3d_nms_utils import boxes_iou3d_gpu
 from opencood.utils import box_utils
 
 
 class RoIHead(nn.Module):
     def __init__(self, model_cfg):
         super().__init__()
+        from opencood.pcdet_utils.pointnet2.pointnet2_stack import pointnet2_modules as pointnet2_stack_modules
+
         self.model_cfg = model_cfg
         input_channels = model_cfg["in_channels"]
         self.code_size = 7
@@ -106,6 +106,8 @@ class RoIHead(nn.Module):
         return roi_grid_points
 
     def assign_targets(self, batch_dict):
+        from opencood.pcdet_utils.iou3d_nms.iou3d_nms_utils import boxes_iou3d_gpu
+
         batch_dict["rcnn_label_dict"] = {
             "rois": [],
             "gt_of_rois": [],
