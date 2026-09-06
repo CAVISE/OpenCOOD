@@ -30,13 +30,13 @@ class EarlyFusionDataset(basedataset.BaseDataset):
     point cloud to the ego vehicle.
     """
 
-    def __init__(self, params, visualize, train=True, payload_handler=None):
+    def __init__(self, params, visualize, train=True, communication_interface=None):
         super(EarlyFusionDataset, self).__init__(params, visualize, train)
         self.pre_processor = build_preprocessor(params["preprocess"], train)
         self.post_processor = build_postprocessor(params["postprocess"], train)
 
-        self.payload_handler = payload_handler
-        self.module_name = "OpenCOOD.EarlyFusionDataset"
+        self.communication_interface = communication_interface
+        self.module_name = "opencood.EarlyFusionDataset"
 
     def __find_ego_vehicle(self, base_data_dict):
         ego_id = -1
@@ -72,7 +72,7 @@ class EarlyFusionDataset(basedataset.BaseDataset):
         """
         base_data_dict = self.retrieve_base_data(idx)
 
-        if self.payload_handler is not None:
+        if self.communication_interface is not None:
             for cav_id, selected_cav_base in base_data_dict.items():
                 lidar_points, _ = self.__prepare_local_lidar(selected_cav_base)
                 payload = agent_payload_builder(
@@ -82,7 +82,7 @@ class EarlyFusionDataset(basedataset.BaseDataset):
                         capture_frame=idx - int(selected_cav_base["time_delay"]),
                     ),
                 )
-                self.payload_handler.set_opencda_payload(cav_id, self.module_name, payload)
+                self.communication_interface.publish(cav_id, self.module_name, payload)
 
     def __process_with_messages(self, ego_id, ego_lidar_pose, base_data_dict):
         projected_lidar_stack = []
@@ -92,20 +92,19 @@ class EarlyFusionDataset(basedataset.BaseDataset):
 
         projected_lidar_stack.append(ego_cav_processed["projected_lidar"])
 
-        if ego_id in self.payload_handler.current_artery_payload:
-            for cav_id, _ in base_data_dict.items():
-                if cav_id == ego_id:
-                    continue
-                raw_payload = self.payload_handler.get_artery_payload(ego_id, cav_id, self.module_name)
-                if raw_payload is None:
-                    continue
-                if self.communication_adapter is None:
-                    raise RuntimeError("Early-fusion payload decoding requires a communication adapter")
-                decoded_payload = self.communication_adapter.decode_received_payload(
-                    raw_payload,
-                    ego_lidar_pose,
-                )
-                projected_lidar_stack.append(decoded_payload["projected_lidar"])
+        for cav_id, _ in base_data_dict.items():
+            if cav_id == ego_id:
+                continue
+            raw_payload = self.communication_interface.receive(ego_id, cav_id, self.module_name)
+            if raw_payload is None:
+                continue
+            if self.communication_adapter is None:
+                raise RuntimeError("Early-fusion payload decoding requires a communication adapter")
+            decoded_payload = self.communication_adapter.decode_received_payload(
+                raw_payload,
+                ego_lidar_pose,
+            )
+            projected_lidar_stack.append(decoded_payload["projected_lidar"])
 
         return {"projected_lidar_stack": projected_lidar_stack}
 
@@ -284,7 +283,7 @@ class EarlyFusionDataset(basedataset.BaseDataset):
         base_data_dict = self.retrieve_base_data(idx)
         ego_id, ego_lidar_pose = self.__find_ego_vehicle(base_data_dict)
 
-        if self.payload_handler is not None:
+        if self.communication_interface is not None:
             inference_input = self.__process_with_messages(ego_id, ego_lidar_pose, base_data_dict)
         else:
             inference_input = self.__process_without_messages(ego_lidar_pose, base_data_dict)

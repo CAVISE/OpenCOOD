@@ -1,0 +1,23 @@
+name: Build native artifacts
+
+on:
+  workflow_dispatch:
+  pull_request:
+
+jobs:
+  cuda:
+    uses: CAVISE/pipelines/.github/workflows/python-cmake-cuda.yml@main
+    with:
+      # Keep the verification process outside the repository root so the
+      # source package cannot shadow the separately installed CUDA artifacts.
+      working-directory: .github
+      requirements-file: ../requirements-cuda.txt
+      cmake-source-dir: ..
+      cmake-build-dir: ../build/cuda
+      cuda-architectures: "86"
+      pythonpath-subdir: opencood
+      python-import-modules: >-
+        ["opencood.pcdet_utils.iou3d_nms.iou3d_nms_cuda",
+        "opencood.pcdet_utils.pointnet2.pointnet2_batch.pointnet2_batch_cuda",
+        "opencood.pcdet_utils.pointnet2.pointnet2_stack.pointnet2_stack_cuda",
+        "opencood.pcdet_utils.roiaware_pool3d.roiaware_pool3d_cuda"]

@@ -36,13 +36,13 @@ class LateFusionDataset(basedataset.BaseDataset):
     detection outputs to ego.
     """
 
-    def __init__(self, params, visualize, train=True, payload_handler=None):
+    def __init__(self, params, visualize, train=True, communication_interface=None):
         super(LateFusionDataset, self).__init__(params, visualize, train)
         self.pre_processor = build_preprocessor(params["preprocess"], train)
         self.post_processor = build_postprocessor(params["postprocess"], train)
 
-        self.payload_handler = payload_handler
-        self.module_name = "OpenCOOD.LateFusionDataset"
+        self.communication_interface = communication_interface
+        self.module_name = "opencood.LateFusionDataset"
 
     def __getitem__(self, idx):
         base_data_dict = self.retrieve_base_data(idx)
@@ -71,7 +71,7 @@ class LateFusionDataset(basedataset.BaseDataset):
         """
         base_data_dict = self.retrieve_base_data(idx)
 
-        if self.payload_handler is not None:
+        if self.communication_interface is not None:
             for cav_id, selected_cav_base in base_data_dict.items():
                 selected_cav_processed = self.__build_model_input(selected_cav_base)
                 payload = agent_payload_builder(
@@ -81,7 +81,7 @@ class LateFusionDataset(basedataset.BaseDataset):
                         capture_frame=idx - int(selected_cav_base["time_delay"]),
                     ),
                 )
-                self.payload_handler.set_opencda_payload(cav_id, self.module_name, payload)
+                self.communication_interface.publish(cav_id, self.module_name, payload)
 
     def __find_ego_vehicle(self, base_data_dict):
         ego_id = -1
@@ -189,19 +189,18 @@ class LateFusionDataset(basedataset.BaseDataset):
             "transformation_matrix": transformation_matrix_info,
         }
 
-        if ego_id in self.payload_handler.current_artery_payload:
-            for cav_id, _ in base_data_dict.items():
-                if cav_id == ego_id:
-                    continue
-                raw_payload = self.payload_handler.get_artery_payload(ego_id, cav_id, self.module_name)
-                if raw_payload is None:
-                    continue
-                if self.communication_adapter is None:
-                    raise RuntimeError("Late-fusion payload decoding requires a communication adapter")
-                processed_data_dict[cav_id] = self.communication_adapter.decode_received_payload(
-                    raw_payload,
-                    ego_lidar_pose,
-                )
+        for cav_id, _ in base_data_dict.items():
+            if cav_id == ego_id:
+                continue
+            raw_payload = self.communication_interface.receive(ego_id, cav_id, self.module_name)
+            if raw_payload is None:
+                continue
+            if self.communication_adapter is None:
+                raise RuntimeError("Late-fusion payload decoding requires a communication adapter")
+            processed_data_dict[cav_id] = self.communication_adapter.decode_received_payload(
+                raw_payload,
+                ego_lidar_pose,
+            )
 
         return processed_data_dict
 
@@ -393,7 +392,7 @@ class LateFusionDataset(basedataset.BaseDataset):
         visualization_base_data_dict = self.__retrieve_visualization_base_data(idx) if self.visualize else base_data_dict
         _, visualization_ego_lidar_pose = self.__find_ego_vehicle(visualization_base_data_dict)
 
-        if self.payload_handler is not None:
+        if self.communication_interface is not None:
             inference_input = self.__process_with_messages(ego_id, ego_lidar_pose, base_data_dict)
         else:
             inference_input = self.__process_without_messages(ego_id, ego_lidar_pose, base_data_dict)

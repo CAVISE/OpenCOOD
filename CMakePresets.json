@@ -1,0 +1,25 @@
+{
+  "buildPresets": [
+    {
+      "configurePreset": "cuda",
+      "name": "cuda"
+    }
+  ],
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 31,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "binaryDir": "${sourceDir}/build/cuda",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      },
+      "displayName": "OpenCOOD CUDA extensions",
+      "generator": "Ninja",
+      "name": "cuda"
+    }
+  ],
+  "version": 6
+}

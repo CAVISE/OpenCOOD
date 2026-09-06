@@ -1,7 +1,7 @@
 file(
     GLOB_RECURSE installed_cuda_artifacts
     RELATIVE "${CMAKE_INSTALL_PREFIX}"
-    "${CMAKE_INSTALL_PREFIX}/OpenCOOD/opencood/pcdet_utils/*_cuda*.so"
+    "${CMAKE_INSTALL_PREFIX}/opencood/opencood/pcdet_utils/*_cuda*.so"
 )
 list(SORT installed_cuda_artifacts)
 

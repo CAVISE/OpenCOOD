@@ -309,8 +309,8 @@ def test_early_dataset_gives_adapter_sender_local_points(monkeypatch):
         np.arange,
     )
     dataset = object.__new__(EarlyFusionDataset)
-    dataset.module_name = "OpenCOOD.EarlyFusionDataset"
-    dataset.payload_handler = MagicMock()
+    dataset.module_name = "opencood.EarlyFusionDataset"
+    dataset.communication_interface = MagicMock()
     dataset.retrieve_base_data = Mock(
         return_value={
             "cav-1": {
@@ -340,7 +340,7 @@ def test_early_dataset_gives_adapter_sender_local_points(monkeypatch):
         lidar_pose=[10.0, 20.0, 0.0, 0.0, 0.0, 0.0],
         capture_frame=8,
     )
-    dataset.payload_handler.set_opencda_payload.assert_called_once_with(
+    dataset.communication_interface.publish.assert_called_once_with(
         "cav-1",
         dataset.module_name,
         payload,
@@ -389,11 +389,10 @@ def test_early_adapter_rejects_payload_from_another_contract():
 
 def test_early_dataset_ignores_looped_back_ego_payload():
     dataset = object.__new__(EarlyFusionDataset)
-    dataset.module_name = "OpenCOOD.EarlyFusionDataset"
-    dataset.payload_handler = MagicMock()
-    dataset.payload_handler.current_artery_payload = {"ego": object()}
+    dataset.module_name = "opencood.EarlyFusionDataset"
+    dataset.communication_interface = MagicMock()
     remote_payload = object()
-    dataset.payload_handler.get_artery_payload.return_value = remote_payload
+    dataset.communication_interface.receive.return_value = remote_payload
     dataset.communication_adapter = MagicMock()
     remote_lidar = np.full((1, 4), 2.0, dtype=np.float32)
     dataset.communication_adapter.decode_received_payload.return_value = {
@@ -420,7 +419,7 @@ def test_early_dataset_ignores_looped_back_ego_payload():
     assert len(result["projected_lidar_stack"]) == 2
     np.testing.assert_array_equal(result["projected_lidar_stack"][0], ego_lidar)
     np.testing.assert_array_equal(result["projected_lidar_stack"][1], remote_lidar)
-    dataset.payload_handler.get_artery_payload.assert_called_once_with(
+    dataset.communication_interface.receive.assert_called_once_with(
         "ego",
         "remote",
         dataset.module_name,
@@ -581,11 +580,10 @@ def test_late_inference_does_not_run_model_for_received_detections():
 
 def test_late_dataset_ignores_looped_back_ego_payload():
     dataset = object.__new__(LateFusionDataset)
-    dataset.module_name = "OpenCOOD.LateFusionDataset"
-    dataset.payload_handler = MagicMock()
-    dataset.payload_handler.current_artery_payload = {"ego": object()}
+    dataset.module_name = "opencood.LateFusionDataset"
+    dataset.communication_interface = MagicMock()
     remote_payload = object()
-    dataset.payload_handler.get_artery_payload.return_value = remote_payload
+    dataset.communication_interface.receive.return_value = remote_payload
     remote_detections = {
         "pred_box_tensor": np.ones((1, 8, 3), dtype=np.float32),
         "pred_score": np.ones(1, dtype=np.float32),
@@ -612,7 +610,7 @@ def test_late_dataset_ignores_looped_back_ego_payload():
 
     assert result["ego"]["inference_input"] is local_input
     assert result["remote"] is remote_detections
-    dataset.payload_handler.get_artery_payload.assert_called_once_with(
+    dataset.communication_interface.receive.assert_called_once_with(
         "ego",
         "remote",
         dataset.module_name,

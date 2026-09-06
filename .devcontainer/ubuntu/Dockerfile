@@ -1,5 +1,4 @@
-# TODO: Check why opencda mounts to devcontainer instead of just OpenCOOD
-FROM docker.io/nvidia/cuda:12.8.1-cudnn-devel-ubuntu24.04@sha256:24c8e3581ea6330038b0d374920721983312627f8adbfcf390bdb4b399d280ed AS opencda
+FROM docker.io/nvidia/cuda:12.8.1-cudnn-devel-ubuntu24.04@sha256:24c8e3581ea6330038b0d374920721983312627f8adbfcf390bdb4b399d280ed AS opencood
 SHELL [ "/bin/bash", "-c"]
 ARG USER=devcontainer
 ARG UID=1000
@@ -7,8 +6,6 @@ ARG HOME=/home/${USER}
 
 ENV TORCH_CUDA_ARCH_LIST="8.9"
 ENV TORCH_NVCC_FLAGS="--allow-unsupported-compiler"
-ENV PYTHONPATH="/workspaces/opencda/OpenCOOD"
-
 RUN userdel -r ubuntu && useradd -l -m -u ${UID} -s /bin/bash ${USER} -d ${HOME}
 
 RUN apt-get update && \

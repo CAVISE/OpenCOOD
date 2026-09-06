@@ -8,6 +8,7 @@
   },
   "containerUser": "devcontainer",
   "name": "OpenCOOD DevContainer",
+  "postCreateCommand": "python3 -m pip install --break-system-packages --no-deps -e ${containerWorkspaceFolder}",
   "runArgs": [
     "--shm-size=8g"
   ]

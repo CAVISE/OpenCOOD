@@ -1,66 +1,47 @@
 # Installation
 
-* [__System/Hardware Requirements__](#requirements)
-* [__Installation__](#installation)
-    * [__1. Dependency Installation__](#1-dependency-installation)
-    * [__2. Install Pytorch__](#2-pytorch-installation-18)
-    * [__3. Install Spconv__](#3-spconv-121-requred)
+## System and hardware requirements
 
+- The CAVISE integration is tested under Ubuntu 24.04.
+- Python 3.12 or newer is required by this fork.
+- A CUDA-capable GPU with at least 6 GB of memory is recommended.
+- Around 100 GB of free disk space is recommended for datasets.
 
+## Source installation
 
-
----
-## System/Hardware Requirements
-To get started, the following requirements should be fulfilled.
-* __System requirements.__ OpenCOOD is tested under Ubuntu 18.04
-* __Adequate GPU.__ A minimum of 6GB gpu is recommended.
-* __Disk Space.__ Estimate 100GB of space is recommended for data downoading.
-* __Python__ Python3.7 is required.
-
-
----
-## Installation
-### 1. Dependency Installation
-First, download OpenCOOD github to your local folder if you haven't done it yet.
-```sh
-git clone https://github.com/DerrickXuNu/OpenCOOD.git
-cd OpenCOOD
-```
-Next we create a conda environment and install the requirements.
+Clone OpenCOOD next to OpenCDA, install its standalone dependencies, and then
+install the source tree in editable mode:
 
 ```sh
-conda env create -f environment.yml
-conda activate opencood
-python setup.py develop
+git clone https://github.com/CAVISE/opencood.git
+cd opencood
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+python -m pip install --no-deps --editable .
 ```
 
-If conda install failed,  install through pip
+The requirements file intentionally includes dependencies that may also be
+installed by OpenCDA. OpenCOOD remains usable as a standalone source checkout.
+The `--no-deps` option on the second command avoids resolving those packages a
+second time; the first command has already installed them using the CUDA wheel
+indexes declared in `requirements.txt`.
+
+## Dependencies for FPV-RCNN
+
+OpenCOOD owns the CUDA extensions used by FPV-RCNN. Install the smaller build
+dependency set, configure an explicit compute capability, and build from this
+repository's root:
+
 ```sh
-pip install -r requirements.txt
+python -m pip install -r requirements-cuda.txt
+cmake --preset cuda -DCMAKE_CUDA_ARCHITECTURES=86
+cmake --build --preset cuda
+cmake --install build/cuda --prefix build/cuda-install
 ```
 
-### 2. Pytorch Installation (>=1.8, tested on 1.8-1.12.0)
-Go to https://pytorch.org/ to install pytorch cuda version.
-
-### 3. Spconv (1.2.1 or 2.x)
-OpenCOOD support both spconv 1.2.1 and 2.x to generate voxel features.
-
-To install spconv 1.2.1, please follow the guide in https://github.com/traveller59/spconv/tree/v1.2.1.
-
-To install spconv 2.x, please run the following commands (if you are using cuda 11.3):
-```python
-pip install spconv-cu113
-```
-#### Tips for installing spconv 1.2.1:
-1. make sure your cmake version >= 3.13.2
-2. CUDNN and CUDA runtime library (use `nvcc --version` to check) needs to be installed on your machine.
-
-
-
-### 4. Dependencies for FPV-RCNN (optional)
-The OpenCOOD CUDA extensions used by FPV-RCNN are built by the OpenCDA
-Docker CUDA builder. They are copied into the runtime image and synchronized
-into the source tree when the container starts.
-
-Rebuild the OpenCDA image after changing any source under
-`opencood/pcdet_utils`.
+The CAVISE `opencda-cuda` and full `opencda` Docker targets run the same
+OpenCOOD-owned CMake build in an isolated builder stage. At container startup,
+OpenCOOD's entrypoint synchronizes those extensions into the mounted source
+tree. Rebuild one of those targets after changing a `.cpp` or `.cu` source
+under `opencood/pcdet_utils`.

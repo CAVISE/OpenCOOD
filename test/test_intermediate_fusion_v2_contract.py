@@ -23,19 +23,19 @@ from opencood.data_utils.datasets.intermediate_fusion_dataset_v2 import (  # noq
 from opencood.models.communication_adapters import PoseFrameMetadata  # noqa: E402
 
 
-class RecordingPayloadHandler:
+class RecordingCommunicationInterface:
     def __init__(self) -> None:
         self.published = []
 
-    def set_opencda_payload(self, cav_id, module_name, payload) -> None:
+    def publish(self, cav_id, module_name, payload) -> None:
         self.published.append((cav_id, module_name, payload))
 
 
 def _build_dataset_for_extraction():
     dataset = IntermediateFusionDatasetV2.__new__(IntermediateFusionDatasetV2)
     dataset.cur_ego_pose_flag = True
-    dataset.module_name = "OpenCOOD.IntermediateFusionDatasetV2"
-    dataset.payload_handler = RecordingPayloadHandler()
+    dataset.module_name = "opencood.IntermediateFusionDatasetV2"
+    dataset.communication_interface = RecordingCommunicationInterface()
     dataset.retrieve_base_data = MagicMock(
         return_value=OrderedDict(
             {
@@ -66,10 +66,10 @@ def test_extract_data_delegates_payload_construction_to_model_adapter():
     dataset.extract_data(idx=10, agent_payload_builder=builder)
 
     assert builder.call_count == 2
-    assert [entry[0] for entry in dataset.payload_handler.published] == ["cav-1", "cav-2"]
-    assert all(entry[1] == "OpenCOOD.IntermediateFusionDatasetV2" for entry in dataset.payload_handler.published)
-    first_metadata = dataset.payload_handler.published[0][2][1]
-    second_metadata = dataset.payload_handler.published[1][2][1]
+    assert [entry[0] for entry in dataset.communication_interface.published] == ["cav-1", "cav-2"]
+    assert all(entry[1] == "opencood.IntermediateFusionDatasetV2" for entry in dataset.communication_interface.published)
+    first_metadata = dataset.communication_interface.published[0][2][1]
+    second_metadata = dataset.communication_interface.published[1][2][1]
     assert isinstance(first_metadata, PoseFrameMetadata)
     assert first_metadata.capture_frame == 10
     assert second_metadata.capture_frame == 8
@@ -85,7 +85,7 @@ def test_extract_data_does_not_assume_fpvrcnn_without_adapter():
 
 def test_local_supervision_uses_complete_scene_and_stays_outside_wire_path():
     dataset = IntermediateFusionDatasetV2.__new__(IntermediateFusionDatasetV2)
-    dataset.payload_handler = object()
+    dataset.communication_interface = object()
     dataset.post_processor = MagicMock()
     object_centers = np.ones((4, 7), dtype=np.float32)
     object_mask = np.array([1.0, 1.0, 0.0, 0.0], dtype=np.float32)
@@ -121,7 +121,7 @@ def test_local_supervision_uses_complete_scene_and_stays_outside_wire_path():
 
 def test_local_supervision_builds_stage_two_labels_only_without_capi_transport():
     dataset = IntermediateFusionDatasetV2.__new__(IntermediateFusionDatasetV2)
-    dataset.payload_handler = None
+    dataset.communication_interface = None
     dataset.post_processor = MagicMock()
     object_centers = np.ones((2, 7), dtype=np.float32)
     object_mask = np.ones(2, dtype=np.float32)
@@ -150,12 +150,12 @@ def test_local_supervision_builds_stage_two_labels_only_without_capi_transport()
 
 def test_received_payloads_are_decoded_by_attached_model_adapter():
     dataset = IntermediateFusionDatasetV2.__new__(IntermediateFusionDatasetV2)
+    dataset.module_name = "opencood.IntermediateFusionDatasetV2"
     dataset.communication_adapter = MagicMock()
     dataset.communication_adapter.decode_received_payload.return_value = {"model_specific_feature": np.array([1.0], dtype=np.float32)}
-    dataset.payload_handler = MagicMock()
-    dataset.payload_handler.current_artery_payload = {"cav-1": {"cav-2": object()}}
+    dataset.communication_interface = MagicMock()
     raw_payload = object()
-    dataset.payload_handler.get_artery_payload.side_effect = [raw_payload, None]
+    dataset.communication_interface.receive.side_effect = [raw_payload, None]
     local_input = {
         "processed_features": {"voxel_features": np.ones((1, 4), dtype=np.float32)},
         "projected_lidar": np.ones((2, 4), dtype=np.float32),
