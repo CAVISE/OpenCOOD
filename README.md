@@ -8,6 +8,9 @@
 [![paper](https://img.shields.io/badge/arXiv-Paper-<COLOR>.svg)](https://arxiv.org/pdf/2109.07644.pdf)
 [![Documentation Status](https://readthedocs.org/projects/opencood/badge/?version=latest)](https://opencood.readthedocs.io/en/latest/?badge=latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Tests on main](https://img.shields.io/github/actions/workflow/status/CAVISE/OpenCOOD/tests.yml?branch=main&event=push&style=for-the-badge&label=Tests&logo=githubactions&logoColor=D9E0EE&labelColor=1E202B)](https://github.com/CAVISE/OpenCOOD/actions/workflows/tests.yml)
+[![Checks on main](https://img.shields.io/github/actions/workflow/status/CAVISE/OpenCOOD/checks.yml?branch=main&event=push&style=for-the-badge&label=Checks&logo=githubactions&logoColor=D9E0EE&labelColor=1E202B)](https://github.com/CAVISE/OpenCOOD/actions/workflows/checks.yml)
+[![CUDA build on main](https://img.shields.io/github/actions/workflow/status/CAVISE/OpenCOOD/build.yml?branch=main&event=push&style=for-the-badge&label=CUDA%20build&logo=githubactions&logoColor=D9E0EE&labelColor=1E202B)](https://github.com/CAVISE/OpenCOOD/actions/workflows/build.yml)
 
 OpenCOOD is an <strong>Open</strong> <strong>COO</strong>perative <strong>D</strong>etection framework for autonomous driving. It is also the official implementation of the <strong> ICRA 2022  </strong>
 paper [OPV2V.](https://arxiv.org/abs/2109.07644)
