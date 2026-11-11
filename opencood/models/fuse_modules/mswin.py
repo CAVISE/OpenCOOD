@@ -43,7 +43,7 @@ class BaseWindowAttention(nn.Module):
         new_h = h // self.window_size
         new_w = w // self.window_size
 
-        # q : (b, l, m, new_h*new_w, window_size^2, c_head)
+        # Tensor shape: q : (b, l, m, new_h*new_w, window_size^2, c_head)
         q, k, v = map(
             lambda t: rearrange(
                 t, "b l (new_h w_h) (new_w w_w) (m c) -> b l m (new_h new_w) (w_h w_w) c", m=m, w_h=self.window_size, w_w=self.window_size

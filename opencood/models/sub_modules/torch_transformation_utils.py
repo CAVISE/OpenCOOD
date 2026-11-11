@@ -34,15 +34,15 @@ def get_roi_and_cav_mask(shape, cav_mask, spatial_correction_matrix, discrete_ra
     """
     B, L, H, W, C = shape
     C = 1
-    # (B,L,4,4)
+    # Tensor shape: (B,L,4,4)
     dist_correction_matrix = get_discretized_transformation_matrix(spatial_correction_matrix, discrete_ratio, downsample_rate)
-    # (B*L,2,3)
+    # Tensor shape: (B*L,2,3)
     T = get_transformation_matrix(dist_correction_matrix.reshape(-1, 2, 3), (H, W))
-    # (B,L,1,H,W)
+    # Tensor shape: (B,L,1,H,W)
     roi_mask = get_rotated_roi((B, L, C, H, W), T)
-    # (B,L,1,H,W)
+    # Tensor shape: (B,L,1,H,W)
     com_mask = combine_roi_and_cav_mask(roi_mask, cav_mask)
-    # (B,H,W,1,L)
+    # Tensor shape: (B,H,W,1,L)
     com_mask = com_mask.permute(0, 3, 4, 2, 1)
     return com_mask
 
@@ -63,11 +63,11 @@ def combine_roi_and_cav_mask(roi_mask, cav_mask):
     com_mask : torch.Tensor
         Combined mask.
     """
-    # (B, L, 1, 1, 1)
+    # Tensor shape: (B, L, 1, 1, 1)
     cav_mask = cav_mask.unsqueeze(2).unsqueeze(3).unsqueeze(4)
-    # (B, L, C, H, W)
+    # Tensor shape: (B, L, C, H, W)
     cav_mask = cav_mask.expand(roi_mask.shape)
-    # (B, L, C, H, W)
+    # Tensor shape: (B, L, C, H, W)
     com_mask = roi_mask * cav_mask
     return com_mask
 
@@ -92,11 +92,11 @@ def get_rotated_roi(shape, correction_matrix):
     B, L, C, H, W = shape
     # To reduce the computation, we only need to calculate the
     # mask for the first channel.
-    # (B,L,1,H,W)
+    # Tensor shape: (B,L,1,H,W)
     x = torch.ones((B, L, 1, H, W)).to(correction_matrix.dtype).to(correction_matrix.device)
-    # (B*L,1,H,W)
+    # Tensor shape: (B*L,1,H,W)
     roi_mask = warp_affine(x.reshape(-1, 1, H, W), correction_matrix, dsize=(H, W), mode="nearest")
-    # (B,L,C,H,W)
+    # Tensor shape: (B,L,C,H,W)
     roi_mask = torch.repeat_interleave(roi_mask, C, dim=1).reshape(B, L, C, H, W)
     return roi_mask
 
@@ -326,7 +326,6 @@ def warp_affine(src, M, dsize, mode="bilinear", padding_mode="zeros", align_corn
     M_3x3 = convert_affinematrix_to_homography(M)
     dst_norm_trans_src_norm = normalize_homography(M_3x3, (H, W), dsize)
 
-    # src_norm_trans_dst_norm = torch.inverse(dst_norm_trans_src_norm)
     src_norm_trans_dst_norm = _torch_inverse_cast(dst_norm_trans_src_norm)
     grid = F.affine_grid(src_norm_trans_dst_norm[:, :2, :], [B, C, dsize[0], dsize[1]], align_corners=align_corners)
 
@@ -346,7 +345,7 @@ class Test:
     def load_img():
         torch.manual_seed(0)
         x = torch.randn(1, 5, 16, 400, 200) * 100
-        # x = torch.ones(1, 5, 16, 400, 200)
+
         return x
 
     @staticmethod

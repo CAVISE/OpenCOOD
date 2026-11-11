@@ -22,7 +22,7 @@ class V2V_AttFusion(nn.Module):
 
         out = []
         att = []
-        for xx in split_x:  # split_x[0] [num_car, C, W, H]
+        for xx in split_x:  # Tensor shape: split_x[0] [num_car, C, W, H]
             """ CCNet: Criss-Cross Attention Module: attention for ego vehicle feature + cav feature """
 
             ego_q, _, _ = xx[0:1], xx[0:1], xx[0:1]  # 2 -> ego_k, 3 -> ego_v
@@ -38,10 +38,9 @@ class V2V_AttFusion(nn.Module):
             fuse_att = fuse_fea
             fuse_att = self.cov_att(fuse_att)
 
-            out.append(fuse_att)  # [[1, 64, 100, 352], [1, 64, 100, 352]]
-            # torch.cuda.empty_cache()
+            out.append(fuse_att)  # Tensor shape: [[1, 64, 100, 352], [1, 64, 100, 352]]
 
-        return torch.cat(out, dim=0)  # [2, 64, 100, 352]
+        return torch.cat(out, dim=0)  # Tensor shape: [2, 64, 100, 352]
 
     def regroup(self, x, record_len):
         cum_sum_len = torch.cumsum(record_len, dim=0)

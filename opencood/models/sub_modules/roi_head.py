@@ -68,7 +68,6 @@ class RoIHead(nn.Module):
             fc_layers.extend(
                 [
                     nn.Conv1d(pre_channel, fc_list[k], kernel_size=1, bias=False),
-                    # nn.BatchNorm1d(fc_list[k]),
                     nn.ReLU(),
                 ]
             )
@@ -98,7 +97,7 @@ class RoIHead(nn.Module):
         system of the roi(origin lies in the center of this roi.
         """
         faked_features = rois.new_ones((grid_size, grid_size, grid_size))
-        dense_idx = torch.stack(torch.where(faked_features), dim=1)  # (N, 3) [x_idx, y_idx, z_idx]
+        dense_idx = torch.stack(torch.where(faked_features), dim=1)  # Tensor shape: (N, 3) [x_idx, y_idx, z_idx]
         dense_idx = dense_idx.repeat(batch_size_rcnn, 1, 1).float()  # (B, 6x6x6, 3)
 
         local_roi_size = rois.view(batch_size_rcnn, -1)[:, 3:6]
@@ -118,7 +117,7 @@ class RoIHead(nn.Module):
             "rois_anchor": [],
             "record_len": [],
         }
-        # pred_boxes = [boxes[:, [0, 1, 2, 5, 4, 3, 6]] for boxes in batch_dict['boxes_fused']]
+
         pred_boxes = batch_dict["boxes_fused"]
         gt_boxes = [b[m][:, [0, 1, 2, 5, 4, 3, 6]].float() for b, m in zip(batch_dict["object_bbx_center"], batch_dict["object_bbx_mask"].bool())]
         for rois, gts in zip(pred_boxes, gt_boxes):
@@ -154,7 +153,7 @@ class RoIHead(nn.Module):
             # (0 ~ pi/2, 3pi/2 ~ 2pi)
             heading_label[opposite_flag] = (heading_label[opposite_flag] + np.pi) % (2 * np.pi)
             flag = heading_label > np.pi
-            heading_label[flag] = heading_label[flag] - np.pi * 2  # (-pi/2, pi/2)
+            heading_label[flag] = heading_label[flag] - np.pi * 2  # Angle range: (-pi/2, pi/2)
             heading_label = torch.clamp(heading_label, min=-np.pi / 2, max=np.pi / 2)
             gt_of_rois[:, 6] = heading_label
 
@@ -219,7 +218,7 @@ class RoIHead(nn.Module):
         point_features = torch.cat(point_features, dim=0)
         # (BxN, 6x6x6, 3)
         global_roi_grid_points, _ = self.get_global_grid_points_of_roi(rois)
-        # (B, Nx6x6x6, 3)
+        # Tensor shape: (B, Nx6x6x6, 3)
         global_roi_grid_points = global_roi_grid_points.view(batch_size, -1, 3)
 
         xyz = torch.cat(point_coords, dim=0)
@@ -251,11 +250,11 @@ class RoIHead(nn.Module):
         batch_size_rcnn = pooled_features.shape[0]
         pooled_features = (
             pooled_features.permute(0, 2, 1).contiguous().view(batch_size_rcnn, -1, self.grid_size, self.grid_size, self.grid_size)
-        )  # (BxN, C, 6, 6, 6)
+        )  # Tensor shape: (BxN, C, 6, 6, 6)
         shared_features = self.shared_fc_layers(pooled_features.view(batch_size_rcnn, -1, 1))
-        rcnn_cls = self.cls_layers(shared_features).transpose(1, 2).contiguous().squeeze(dim=1)  # (B, 1 or 2)
-        rcnn_iou = self.iou_layers(shared_features).transpose(1, 2).contiguous().squeeze(dim=1)  # (B, 1)
-        rcnn_reg = self.reg_layers(shared_features).transpose(1, 2).contiguous().squeeze(dim=1)  # (B, C)
+        rcnn_cls = self.cls_layers(shared_features).transpose(1, 2).contiguous().squeeze(dim=1)  # Tensor shape: (B, 1 or 2)
+        rcnn_iou = self.iou_layers(shared_features).transpose(1, 2).contiguous().squeeze(dim=1)  # Tensor shape: (B, 1)
+        rcnn_reg = self.reg_layers(shared_features).transpose(1, 2).contiguous().squeeze(dim=1)  # Tensor shape: (B, C)
 
         batch_dict["fpvrcnn_out"] = {
             "rcnn_cls": rcnn_cls,

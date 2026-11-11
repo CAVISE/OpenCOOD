@@ -47,7 +47,7 @@ def visualize(
 
     if vis_pred_box and pred_box_tensor is not None:
         pred_box_np = pred_box_tensor.cpu().numpy()
-        # pred_name = ['pred'] * pred_box_np.shape[0]
+
         pred_name = [""] * pred_box_np.shape[0]
         if uncertainty is not None:
             uncertainty_np = uncertainty.cpu().numpy()
@@ -83,7 +83,7 @@ def visualize(
 
     if vis_gt_box:
         gt_box_np = gt_tensor.cpu().numpy()
-        # gt_name = ['gt'] * gt_box_np.shape[0]
+
         gt_name = [""] * gt_box_np.shape[0]
 
     if method == "bev":
@@ -96,13 +96,11 @@ def visualize(
 
         canvas_xy, valid_mask = canvas.get_canvas_coords(pcd_np)  # Get Canvas Coords
         canvas.draw_canvas_points(canvas_xy[valid_mask])
-        # color_list = [(0, 206, 209),(255, 215,0)]
+
         # for i, pcd_np_t in enumerate(pcd_np[1:2]):
-        #     canvas_xy, valid_mask = canvas.get_canvas_coords(pcd_np_t) # Get Canvas Coords
-        #     canvas.draw_canvas_points(canvas_xy[valid_mask], colors=color_list[i-1]) # Only draw valid points
+
         box_line_thickness = 5
         if vis_gt_box:
-            # canvas.draw_boxes(gt_box_np,colors=(0,255,0), texts=gt_name)
             canvas.draw_boxes(gt_box_np, colors=(0, 255, 0), texts=gt_name, box_line_thickness=box_line_thickness)
 
         if vis_pred_box and pred_box_tensor is not None:

@@ -159,7 +159,6 @@ class VoxelNet(nn.Module):
         super(VoxelNet, self).__init__()
         self.svfe = PillarVFE(args["pillar_vfe"], num_point_features=4, voxel_size=args["voxel_size"], point_cloud_range=args["lidar_range"])
 
-        # self.svfe = SVFE(args['T'])
         self.cml = CML()
         self.rpn = RPN(args["anchor_num"])
 

@@ -27,7 +27,7 @@ def aligned_boxes_iou3d_gpu(boxes_a, boxes_b, return_union=False):
     boxes_b_height_min = (boxes_b[:, 2] - boxes_b[:, 5] / 2).view(-1, 1)
 
     # bev overlap
-    overlaps_bev = torch.cuda.FloatTensor(torch.Size((boxes_a.shape[0], boxes_b.shape[0]))).zero_()  # (N, M)
+    overlaps_bev = torch.cuda.FloatTensor(torch.Size((boxes_a.shape[0], boxes_b.shape[0]))).zero_()  # Tensor shape: (N, M)
     iou3d_nms_cuda.boxes_overlap_bev_gpu(boxes_a.contiguous(), boxes_b.contiguous(), overlaps_bev)
     overlaps_bev = torch.diagonal(overlaps_bev).reshape(-1, 1)
 
@@ -65,7 +65,7 @@ def boxes_iou3d_gpu(boxes_a, boxes_b, return_union=False):
     boxes_b_height_min = (boxes_b[:, 2] - boxes_b[:, 5] / 2).view(1, -1)
 
     # bev overlap
-    overlaps_bev = torch.cuda.FloatTensor(torch.Size((boxes_a.shape[0], boxes_b.shape[0]))).zero_()  # (N, M)
+    overlaps_bev = torch.cuda.FloatTensor(torch.Size((boxes_a.shape[0], boxes_b.shape[0]))).zero_()  # Tensor shape: (N, M)
     iou3d_nms_cuda.boxes_overlap_bev_gpu(boxes_a.contiguous(), boxes_b.contiguous(), overlaps_bev)
 
     max_of_min = torch.max(boxes_a_height_min, boxes_b_height_min)

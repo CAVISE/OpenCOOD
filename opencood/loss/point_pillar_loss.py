@@ -109,7 +109,7 @@ class PointPillarLoss(nn.Module):
         cls_preds = cls_preds.view(psm.shape[0], -1, 1)
         one_hot_targets = one_hot_targets[..., 1:]
 
-        cls_loss_src = self.cls_loss_func(cls_preds, one_hot_targets, weights=cls_weights)  # [N, M]
+        cls_loss_src = self.cls_loss_func(cls_preds, one_hot_targets, weights=cls_weights)  # Tensor shape: [N, M]
         cls_loss = cls_loss_src.sum() / psm.shape[0]
         conf_loss = cls_loss * self.cls_weight
 

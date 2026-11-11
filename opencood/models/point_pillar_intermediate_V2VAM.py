@@ -96,8 +96,6 @@ class PointPillarintermediateV2VAM(nn.Module):
 
         fused_feature = self.fusion_net(spatial_features_2d, record_len)
 
-        # pdb.set_trace()
-
         psm = self.cls_head(fused_feature)
         rm = self.reg_head(fused_feature)
 

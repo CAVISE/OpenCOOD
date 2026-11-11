@@ -76,11 +76,11 @@ class Canvas_BEV_heading_right(object):
         # They are exactly lidar point coordinate
         x = (x - self.canvas_x_range[0]) / (self.canvas_x_range[1] - self.canvas_x_range[0])
         x = x * self.canvas_shape[1]
-        x = np.clip(np.around(x), 0, self.canvas_shape[1] - 1).astype(np.int32)  # [0,2800-1]
+        x = np.clip(np.around(x), 0, self.canvas_shape[1] - 1).astype(np.int32)  # Tensor shape: [0,2800-1]
 
         y = (y - self.canvas_y_range[0]) / (self.canvas_y_range[1] - self.canvas_y_range[0])
         y = y * self.canvas_shape[0]
-        y = np.clip(np.around(y), 0, self.canvas_shape[0] - 1).astype(np.int32)  # [0,800-1]
+        y = np.clip(np.around(y), 0, self.canvas_shape[0] - 1).astype(np.int32)  # Tensor shape: [0,800-1]
 
         # x and y are exactly image coordinate
         # ------------> x
@@ -193,8 +193,8 @@ class Canvas_BEV_heading_right(object):
         bev_corners = boxes[:, :4, :2]
 
         ## Transform BEV 4 corners to canvas coords
-        bev_corners_canvas, valid_mask = self.get_canvas_coords(bev_corners.reshape(-1, 2))  # [N, 2]
-        bev_corners_canvas = bev_corners_canvas.reshape(*bev_corners.shape)  # [N, 4, 2]
+        bev_corners_canvas, valid_mask = self.get_canvas_coords(bev_corners.reshape(-1, 2))  # Tensor shape: [N, 2]
+        bev_corners_canvas = bev_corners_canvas.reshape(*bev_corners.shape)  # Tensor shape: [N, 4, 2]
         valid_mask = valid_mask.reshape(*bev_corners.shape[:-1])
 
         # At least 1 corner in canvas to draw.
