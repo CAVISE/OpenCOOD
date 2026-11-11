@@ -119,8 +119,8 @@ def calculate_ap(result_stat, iou, global_sort_detections):
         fp = fp[sorted_index].tolist()
         tp = tp[sorted_index].tolist()
     else:
-        fp = iou_5["fp"]
-        tp = iou_5["tp"]
+        fp = iou_5["fp"].copy()
+        tp = iou_5["tp"].copy()
         assert len(fp) == len(tp)
 
     gt_total = iou_5["gt"]
