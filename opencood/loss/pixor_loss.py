@@ -49,13 +49,11 @@ class PixorLoss(nn.Module):
 
         print(f"cls_preds shape: {cls_preds.shape}")
         print(f"cls_targets shape: {cls_targets.shape}")
-        # print(f"pos_neg_weights shape: {pos_neg_weights.shape}")
 
         if cls_targets.shape[2:] != cls_preds.shape[2:]:
             cls_targets = F.interpolate(cls_targets, size=cls_preds.shape[2:], mode="bilinear", align_corners=False)
-            # pos_neg_weights = F.interpolate(pos_neg_weights, size=cls_preds.shape[2:], mode='bilinear', align_corners=False)
+
             print(f"Resized cls_targets shape: {cls_targets.shape}")
-        # print(f"Resized pos_neg_weights shape: {pos_neg_weights.shape}")
 
         cls_loss = F.binary_cross_entropy_with_logits(input=cls_preds, target=cls_targets, reduction="mean")
         pos_pixels = cls_targets.sum()

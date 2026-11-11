@@ -82,48 +82,48 @@ class VoxelPostprocessor(BasePostprocessor):
             Dictionary that contains all target related info.
         """
         assert self.params["order"] == "hwl", "Currently Voxel only supporthwl bbx order."
-        # (max_num, 7)
+        # Tensor shape: (max_num, 7)
         gt_box_center = kwargs["gt_box_center"]
-        # (H, W, anchor_num, 7)
+        # Tensor shape: (H, W, anchor_num, 7)
         anchors = kwargs["anchors"]
         # (max_num)
         masks = kwargs["mask"]
 
-        # (H, W)
+        # Tensor shape: (H, W)
         feature_map_shape = anchors.shape[:2]
 
-        # (H*W*anchor_num, 7)
+        # Tensor shape: (H*W*anchor_num, 7)
         anchors = anchors.reshape(-1, 7)
         # normalization factor, (H * W * anchor_num)
         anchors_d = np.sqrt(anchors[:, 4] ** 2 + anchors[:, 5] ** 2)
 
-        # (H, W, 2)
+        # Tensor shape: (H, W, 2)
         pos_equal_one = np.zeros((*feature_map_shape, self.anchor_num))
         neg_equal_one = np.zeros((*feature_map_shape, self.anchor_num))
-        # (H, W, self.anchor_num * 7)
+        # Tensor shape: (H, W, self.anchor_num * 7)
         targets = np.zeros((*feature_map_shape, self.anchor_num * 7))
 
-        # (n, 7)
+        # Tensor shape: (n, 7)
         gt_box_center_valid = gt_box_center[masks == 1]
-        # (n, 8, 3)
+        # Tensor shape: (n, 8, 3)
         gt_box_corner_valid = box_utils.boxes_to_corners_3d(gt_box_center_valid, self.params["order"])
-        # (H*W*anchor_num, 8, 3)
+        # Tensor shape: (H*W*anchor_num, 8, 3)
         anchors_corner = box_utils.boxes_to_corners_3d(anchors, order=self.params["order"])
-        # (H*W*anchor_num, 4)
+        # Tensor shape: (H*W*anchor_num, 4)
         anchors_standup_2d = box_utils.corner2d_to_standup_box(anchors_corner)
-        # (n, 4)
+        # Tensor shape: (n, 4)
         gt_standup_2d = box_utils.corner2d_to_standup_box(gt_box_corner_valid)
 
-        # (H*W*anchor_n)
+        # Tensor shape: (H*W*anchor_n)
         iou = bbox_overlaps(
             np.ascontiguousarray(anchors_standup_2d).astype(np.float32),
             np.ascontiguousarray(gt_standup_2d).astype(np.float32),
         )
 
         # the anchor boxes has the largest iou across
-        # shape: (n)
+        # Tensor shape: shape: (n)
         id_highest = np.argmax(iou.T, axis=1)
-        # [0, 1, 2, ..., n-1]
+        # Tensor shape: [0, 1, 2, ..., n-1]
         id_highest_gt = np.arange(iou.T.shape[0])
         # make sure all highest iou is larger than 0
         mask = iou.T[id_highest_gt, id_highest] > 0
@@ -295,11 +295,11 @@ class VoxelPostprocessor(BasePostprocessor):
                 output_dict[cav_id],
             )
             if len(boxes3d_corner) != 0:
-                # (N, 8, 3)
+                # Tensor shape: (N, 8, 3)
                 projected_boxes3d = box_utils.project_box3d(boxes3d_corner, transformation_matrix)
                 # convert 3d bbx to 2d, (N,4)
                 projected_boxes2d = box_utils.corner_to_standup_box_torch(projected_boxes3d)
-                # (N, 5)
+                # Tensor shape: (N, 5)
                 boxes2d_score = torch.cat((projected_boxes2d, scores.unsqueeze(1)), dim=1)
 
                 pred_box2d_list.append(boxes2d_score)
@@ -345,7 +345,7 @@ class VoxelPostprocessor(BasePostprocessor):
             anchors = anchors.cuda()
             boxes3d = boxes3d.cuda()
 
-        # (W*L*2, 7)
+        # Tensor shape: (W*L*2, 7)
         anchors_reshaped = anchors.view(-1, 7).float()
         # the diagonal of the anchor 2d box, (W*L*2)
         anchors_d = torch.sqrt(anchors_reshaped[:, 4] ** 2 + anchors_reshaped[:, 5] ** 2)

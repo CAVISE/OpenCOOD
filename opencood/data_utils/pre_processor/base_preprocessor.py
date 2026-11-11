@@ -95,7 +95,7 @@ class BasePreprocessor(object):
         img_col = int((W2 - W1) / ratio)
         bev_map = np.zeros((img_row, img_col))
         bev_origin = np.array([L1, W1, H1]).reshape(1, -1)
-        # (N, 3)
+        # Tensor shape: (N, 3)
         indices = ((points[:, :3] - bev_origin) / ratio).astype(int)
         mask = np.logical_and(indices[:, 0] > 0, indices[:, 0] < img_row)
         mask = np.logical_and(mask, np.logical_and(indices[:, 1] > 0, indices[:, 1] < img_col))

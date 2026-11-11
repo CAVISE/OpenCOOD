@@ -154,7 +154,7 @@ class SwapFusionBlock(nn.Module):
 
     def __init__(self, input_dim, mlp_dim, dim_head, window_size, agent_size, drop_out):
         super(SwapFusionBlock, self).__init__()
-        # b = batch * max_cav
+
         self.block = nn.Sequential(
             Rearrange("b m d (x w1) (y w2) -> b m x y w1 w2 d", w1=window_size, w2=window_size),
             PreNormResidual(input_dim, Attention(input_dim, dim_head, drop_out, agent_size, window_size)),

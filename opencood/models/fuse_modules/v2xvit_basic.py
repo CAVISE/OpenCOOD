@@ -65,8 +65,8 @@ class RTE(nn.Module):
         self.emb = RelTemporalEncoding(dim, RTE_ratio=self.RTE_ratio)
 
     def forward(self, x, dts):
-        # x: (B,L,H,W,C)
-        # dts: (B,L)
+        # Tensor shape: x: (B,L,H,W,C)
+        # Tensor shape: dts: (B,L)
         rte_batch = []
         for b in range(x.shape[0]):
             rte_list = []
@@ -157,12 +157,12 @@ class V2XTEncoder(nn.Module):
     def forward(self, x, mask, spatial_correction_matrix):
         # transform the features to the current timestamp
         # velocity, time_delay, infra
-        # (B,L,H,W,3)
+        # Tensor shape: (B,L,H,W,3)
         prior_encoding = x[..., -3:]
-        # (B,L,H,W,C)
+        # Tensor shape: (B,L,H,W,C)
         x = x[..., :-3]
         if self.use_RTE:
-            # dt: (B,L)
+            # Tensor shape: dt: (B,L)
             dt = prior_encoding[:, :, 0, 0, 1].to(torch.int)
             x = self.rte(x, dt)
         x = self.sttf(x, mask, spatial_correction_matrix)

@@ -56,7 +56,7 @@ class SemanticLidar(BaseSensor):
         if not self:
             return
 
-        # shape:(n, 6)
+        # Tensor shape: shape:(n, 6)
         data = np.frombuffer(
             event.raw_data,
             dtype=np.dtype(
@@ -64,7 +64,7 @@ class SemanticLidar(BaseSensor):
             ),
         )
 
-        # (x, y, z, intensity)
+        # Tensor shape: (x, y, z, intensity)
         self.points = np.array([data["x"], data["y"], data["z"]]).T
         self.obj_tag = np.array(data["ObjTag"])
         self.obj_idx = np.array(data["ObjIdx"])

@@ -494,7 +494,7 @@ class IntermediateFusionDatasetV2(basedataset.BaseDataset):
         # np.array([3,5,6]), ...]}
         merged_feature_dict = self.merge_features_to_dict(processed_lidar_list)
         processed_lidar_torch_dict = self.pre_processor.collate_batch(merged_feature_dict)
-        # [2, 3, 4, ..., M], M <= 5
+        # Tensor shape: [2, 3, 4, ..., M], M <= 5
         record_len = torch.from_numpy(np.array(record_len, dtype=int))
         # object id is only used during inference, where batch size is 1.
         # so here we only get the first element.

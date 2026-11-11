@@ -189,7 +189,7 @@ class Where2comm(nn.Module):
                         x = x * communication_masks
 
                 # 2. Split the features
-                # split_x: [(L1, C, H, W), (L2, C, H, W), ...]
+                # Tensor shape: split_x: [(L1, C, H, W), (L2, C, H, W), ...]
                 # For example [[2, 256, 48, 176], [1, 256, 48, 176], ...]
                 batch_node_features = self.regroup(x, record_len)
 
@@ -224,7 +224,7 @@ class Where2comm(nn.Module):
                 x = x * communication_masks
 
             # 2. Split the features
-            # split_x: [(L1, C, H, W), (L2, C, H, W), ...]
+            # Tensor shape: split_x: [(L1, C, H, W), (L2, C, H, W), ...]
             # For example [[2, 256, 48, 176], [1, 256, 48, 176], ...]
             batch_node_features = self.regroup(x, record_len)
 

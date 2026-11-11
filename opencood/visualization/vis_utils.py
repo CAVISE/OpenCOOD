@@ -296,9 +296,9 @@ def visualize_single_sample_output_bev(pred_box, gt_box, pcd, dataset, show_vis=
     ratio = dataset.params["preprocess"]["args"]["res"]
     L1, W1, H1, L2, W2, _ = dataset.params["preprocess"]["cav_lidar_range"]
     bev_origin = np.array([L1, W1]).reshape(1, -1)
-    # (img_row, img_col)
+    # Tensor shape: (img_row, img_col)
     bev_map = dataset.project_points_to_bev_map(pcd, ratio)
-    # (img_row, img_col, 3)
+    # Tensor shape: (img_row, img_col, 3)
     bev_map = np.repeat(bev_map[:, :, np.newaxis], 3, axis=-1).astype(np.float32)
     bev_map = bev_map * 255
 

@@ -376,7 +376,7 @@ class EarlyFusionDataset(basedataset.BaseDataset):
 
         for cav_id, cav_content in batch.items():
             output_dict.update({cav_id: {}})
-            # shape: (1, max_num, 7)
+            # Tensor shape: shape: (1, max_num, 7)
             object_bbx_center = torch.from_numpy(np.array([cav_content["object_bbx_center"]]))
             object_bbx_mask = torch.from_numpy(np.array([cav_content["object_bbx_mask"]]))
             object_ids = cav_content["object_ids"]

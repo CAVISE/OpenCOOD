@@ -251,16 +251,16 @@ def project_box3d(box3d, transformation_matrix):
     box3d, is_numpy = common_utils.check_numpy_to_torch(box3d)
     transformation_matrix, _ = common_utils.check_numpy_to_torch(transformation_matrix)
 
-    # (N, 3, 8)
+    # Tensor shape: (N, 3, 8)
     box3d_corner = box3d.transpose(1, 2)
-    # (N, 1, 8)
+    # Tensor shape: (N, 1, 8)
     torch_ones = torch.ones((box3d_corner.shape[0], 1, 8))
     torch_ones = torch_ones.to(box3d_corner.device)
-    # (N, 4, 8)
+    # Tensor shape: (N, 4, 8)
     box3d_corner = torch.cat((box3d_corner, torch_ones), dim=1)
-    # (N, 4, 8)
+    # Tensor shape: (N, 4, 8)
     projected_box3d = torch.matmul(transformation_matrix, box3d_corner)
-    # (N, 8, 3)
+    # Tensor shape: (N, 8, 3)
     projected_box3d = projected_box3d[:, :3, :].transpose(1, 2)
 
     return projected_box3d if not is_numpy else projected_box3d.numpy()
@@ -395,7 +395,7 @@ def project_world_objects(object_dict, output_dict, lidar_pose, lidar_range, ord
         object_pose = [location[0] + center[0], location[1] + center[1], location[2] + center[2], rotation[0], rotation[1], rotation[2]]
         object2lidar = x1_to_x2(object_pose, lidar_pose)
 
-        # shape (3, 8)
+        # Tensor shape: shape (3, 8)
         bbx = create_bbx(extent).T
         # bounding box under ego coordinate shape (4, 8)
         bbx = np.r_[bbx, [np.ones(bbx.shape[1])]]
@@ -589,9 +589,9 @@ def project_points_by_matrix_torch(points, transformation_matrix):
     transformation_matrix, _ = common_utils.check_numpy_to_torch(transformation_matrix)
 
     # convert to homogeneous coordinates via padding 1 at the last dimension.
-    # (N, 4)
+    # Tensor shape: (N, 4)
     points_homogeneous = F.pad(points, (0, 1), mode="constant", value=1)
-    # (N, 4)
+    # Tensor shape: (N, 4)
     projected_points = torch.einsum("ik, jk->ij", points_homogeneous, transformation_matrix)
 
     return projected_points[:, :3] if not is_numpy else projected_points[:, :3].numpy()

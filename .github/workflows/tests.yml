@@ -6,17 +6,43 @@ on:
 
 jobs:
   pytest:
-    uses: CAVISE/pipelines/.github/workflows/python-pytest.yml@main
-    with:
-      python-versions: '["3.12"]'
-      fail-fast: false
-      cache-dependency-path: |
-        .github/workflows/requirements/requirements-ci.txt
-        requirements.txt
-        pyproject.toml
-      requirements-file: .github/workflows/requirements/requirements-ci.txt
-      matplotlib-backend: Agg
-      pytest-maxfail: 0
-      report-dir: reports
-      upload-artifact: true
-      artifact-name-prefix: pytest-junit
+    name: pytest (3.12)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    env:
+      MPLBACKEND: Agg
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install Open3D system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libegl1 libgl1 libgomp1
+
+      - name: Setup Python and dependencies
+        uses: CAVISE/pipelines/actions/setup-python-pip@main
+        with:
+          python-version: "3.12"
+          cache-dependency-path: |
+            .github/workflows/requirements/requirements-ci.txt
+            requirements.txt
+            pyproject.toml
+
+      - name: Install requirements
+        run: python -m pip install -r .github/workflows/requirements/requirements-ci.txt
+
+      - name: Run pytest
+        run: |
+          mkdir -p reports
+          python -m pytest -ra --maxfail=0 --junitxml=reports/pytest-3.12.xml .
+
+      - name: Upload JUnit report
+        if: always() && !env.ACT
+        uses: actions/upload-artifact@v7
+        with:
+          name: pytest-junit-3.12
+          path: reports/pytest-3.12.xml
+          if-no-files-found: error
