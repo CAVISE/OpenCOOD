@@ -100,13 +100,13 @@ class QueryAndGroup(nn.Module):
         """
         idx = ball_query(self.radius, self.nsample, xyz, new_xyz)
         xyz_trans = xyz.transpose(1, 2).contiguous()
-        grouped_xyz = grouping_operation(xyz_trans, idx)  # (B, 3, npoint, nsample)
+        grouped_xyz = grouping_operation(xyz_trans, idx)  # Tensor shape: (B, 3, npoint, nsample)
         grouped_xyz -= new_xyz.transpose(1, 2).unsqueeze(-1)
 
         if features is not None:
             grouped_features = grouping_operation(features, idx)
             if self.use_xyz:
-                new_features = torch.cat([grouped_xyz, grouped_features], dim=1)  # (B, C + 3, npoint, nsample)
+                new_features = torch.cat([grouped_xyz, grouped_features], dim=1)  # Tensor shape: (B, C + 3, npoint, nsample)
             else:
                 new_features = grouped_features
         else:

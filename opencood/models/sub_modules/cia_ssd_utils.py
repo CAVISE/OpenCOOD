@@ -98,7 +98,7 @@ class Head(nn.Module):
         cls_preds = self.conv_cls(x)
         ret_dict = {"box_preds": box_preds, "cls_preds": cls_preds}
         if self.use_dir:
-            dir_preds = self.conv_dir(x)  # dir_preds.shape=[8, w, h, 4]
+            dir_preds = self.conv_dir(x)  # Tensor shape: dir_preds.shape=[8, w, h, 4]
             ret_dict["dir_cls_preds"] = dir_preds
         else:
             ret_dict["dir_cls_preds"] = torch.zeros((len(box_preds), 1, 2))

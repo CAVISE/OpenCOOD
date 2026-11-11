@@ -25,11 +25,10 @@ class BasicBlock(nn.Module):
         residual = x
 
         out = self.conv1(x)
-        # out = self.bn1(out)
+
         out = self.relu(out)
 
         out = self.conv2(out)
-        # out = self.bn2(out)
 
         if self.downsample is not None:
             residual = self.downsample(x)
@@ -70,23 +69,23 @@ class Bottleneck(nn.Module):
             Shape (N, self.expansion*planes, W/stride, L/stride).
         """
         residual = x
-        # (N, planes, W, L)
+        # Tensor shape: (N, planes, W, L)
         out = self.conv1(x)
         if self.use_bn:
             out = self.bn1(out)
         out = self.relu(out)
-        # (N, planes, W/stride, L/stride)
+        # Tensor shape: (N, planes, W/stride, L/stride)
         out = self.conv2(out)
         if self.use_bn:
             out = self.bn2(out)
         out = self.relu(out)
-        # (N, self.expansion*planes, W/stride, L/stride)
+        # Tensor shape: (N, self.expansion*planes, W/stride, L/stride)
         out = self.conv3(out)
         if self.use_bn:
             out = self.bn3(out)
 
         if self.downsample is not None:
-            # (N, self.expansion*planes, W/2, L/2)
+            # Tensor shape: (N, self.expansion*planes, W/2, L/2)
             residual = self.downsample(x)
         out = self.relu(residual + out)
         return out
@@ -257,8 +256,8 @@ class PIXOR(nn.Module):
         bev_input = data_dict["processed_lidar"]["bev_input"]
 
         features = self.backbone(bev_input)
-        # cls -- (N, 1, W/4, L/4)
-        # reg -- (N, 6, W/4, L/4)
+        # Tensor shape: cls -- (N, 1, W/4, L/4)
+        # Tensor shape: reg -- (N, 6, W/4, L/4)
         cls, reg = self.header(features)
 
         output_dict = {"cls": cls, "reg": reg}

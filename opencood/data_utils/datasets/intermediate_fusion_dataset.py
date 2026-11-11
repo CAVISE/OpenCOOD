@@ -673,7 +673,7 @@ class IntermediateFusionDataset(basedataset.BaseDataset):
         else:
             merged_feature_dict = self.merge_features_to_dict(processed_lidar_list)
             processed_lidar_torch_dict = self.pre_processor.collate_batch(merged_feature_dict)
-        # [2, 3, 4, ..., M], M <= max_cav
+        # Tensor shape: [2, 3, 4, ..., M], M <= max_cav
         record_len = torch.from_numpy(np.array(record_len, dtype=int))
         label_torch_dict = self.post_processor.collate_batch(label_dict_list)
 

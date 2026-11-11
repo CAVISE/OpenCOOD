@@ -66,7 +66,7 @@ def rotate_points_along_z_2d(points, angle):
     angle, _ = check_numpy_to_torch(angle)
     cosa = torch.cos(angle)
     sina = torch.sin(angle)
-    # (N, 2, 2)
+    # Tensor shape: (N, 2, 2)
     rot_matrix = torch.stack((cosa, sina, -sina, cosa), dim=1).view(-1, 2, 2).float()
     points_rot = torch.einsum("ik, ikj->ij", points.float(), rot_matrix)
     return points_rot.numpy() if is_numpy else points_rot

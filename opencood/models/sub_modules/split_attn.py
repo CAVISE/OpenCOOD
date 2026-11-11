@@ -15,7 +15,7 @@ class RadixSoftmax(nn.Module):
         cav_num = x.size(1)
 
         if self.radix > 1:
-            # x: (B, L, 1, 3, C)
+            # Tensor shape: x: (B, L, 1, 3, C)
             x = x.view(batch, cav_num, self.cardinality, self.radix, -1)
             x = F.softmax(x, dim=3)
             # B, 3LC

@@ -107,11 +107,11 @@ class VoxelSetAbstraction(nn.Module):
         for k in range(batch_size):
             cur_x_idxs = x_idxs[k]
             cur_y_idxs = y_idxs[k]
-            cur_bev_features = bev_features[k].permute(1, 2, 0)  # (H, W, C)
+            cur_bev_features = bev_features[k].permute(1, 2, 0)  # Tensor shape: (H, W, C)
             point_bev_features = bilinear_interpolate_torch(cur_bev_features, cur_x_idxs, cur_y_idxs)
             point_bev_features_list.append(point_bev_features.unsqueeze(dim=0))
 
-        point_bev_features = torch.cat(point_bev_features_list, dim=0)  # (B, N, C0)
+        point_bev_features = torch.cat(point_bev_features_list, dim=0)  # Tensor shape: (B, N, C0)
         return point_bev_features
 
     def get_sampled_points(self, batch_dict):
@@ -134,7 +134,7 @@ class VoxelSetAbstraction(nn.Module):
         keypoints_batch[..., 2] = 10.0
         for bs_idx in range(batch_size):
             bs_mask = batch_indices == bs_idx
-            sampled_points = src_points[bs_mask].unsqueeze(dim=0)  # (1, N, 3)
+            sampled_points = src_points[bs_mask].unsqueeze(dim=0)  # Tensor shape: (1, N, 3)
             # sample points with FPS
             # some cropped pcd may have very few points, select various number
             # of points to ensure similar sample density
@@ -151,7 +151,6 @@ class VoxelSetAbstraction(nn.Module):
 
             keypoints_batch[bs_idx, : len(keypoints[0]), :] = keypoints
 
-        # keypoints = torch.cat(keypoints_list, dim=0)  # (B, M, 3)
         return keypoints_batch
 
     def forward(self, batch_dict):

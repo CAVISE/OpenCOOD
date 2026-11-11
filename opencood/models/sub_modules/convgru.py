@@ -161,7 +161,7 @@ class ConvGRU(nn.Module):
                 # then compute the next hidden
                 # and cell state through ConvLSTMCell forward function
                 h = self.cell_list[layer_idx](
-                    input_tensor=cur_layer_input[:, t, :, :, :],  # (b,t,c,h,w)
+                    input_tensor=cur_layer_input[:, t, :, :, :],  # Tensor shape: (b,t,c,h,w)
                     h_cur=h,
                 )
                 output_inner.append(h)

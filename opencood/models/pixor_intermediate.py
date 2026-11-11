@@ -92,8 +92,8 @@ class PIXORIntermediate(nn.Module):
         record_len = data_dict["record_len"]
 
         features = self.backbone(bev_input, record_len)
-        # cls -- (N, 1, W/4, L/4)
-        # reg -- (N, 6, W/4, L/4)
+        # Tensor shape: cls -- (N, 1, W/4, L/4)
+        # Tensor shape: reg -- (N, 6, W/4, L/4)
         cls, reg = self.header(features)
 
         output_dict = {"cls": cls, "reg": reg}

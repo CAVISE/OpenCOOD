@@ -96,7 +96,7 @@ class CiassdPostprocessor(VoxelPostprocessor):
             else:
                 transformation_matrix = torch.from_numpy(np.identity(4)).float().to(cav_content["anchor_box"].device)
 
-            # (H, W, anchor_num, 7)
+            # Tensor shape: (H, W, anchor_num, 7)
             anchor_box = cav_content["anchor_box"]
 
             # prediction result
@@ -110,7 +110,7 @@ class CiassdPostprocessor(VoxelPostprocessor):
             dir = preds_dict["dir_cls_preds"].permute(0, 2, 3, 1).contiguous().reshape(1, -1, 2)
 
             # convert regression map back to bounding box
-            # (N, W*L*anchor_num, 7)
+            # Tensor shape: (N, W*L*anchor_num, 7)
             batch_box3d = self.delta_to_boxes3d(reg, anchor_box, False)
             mask = torch.gt(prob, self.params["target_args"]["score_threshold"])
             batch_num_box_count = [int(m.sum()) for m in mask]
@@ -126,7 +126,7 @@ class CiassdPostprocessor(VoxelPostprocessor):
 
             dir_labels = torch.max(dir, dim=-1)[1]
             dir_labels = dir_labels[mask]
-            # top_labels = torch.zeros([scores.shape[0]], dtype=torch.long).cuda()
+
             if scores.shape[0] != 0:
                 iou = (iou + 1) * 0.5
                 scores = scores * torch.pow(iou.masked_select(mask), 4)
@@ -137,13 +137,13 @@ class CiassdPostprocessor(VoxelPostprocessor):
 
             # convert output to bounding box
             if len(boxes3d) != 0:
-                # (N, 8, 3)
+                # Tensor shape: (N, 8, 3)
                 boxes3d_corner = box_utils.boxes_to_corners_3d(boxes3d, order=self.params["order"])
-                # (N, 8, 3)
+                # Tensor shape: (N, 8, 3)
                 projected_boxes3d = box_utils.project_box3d(boxes3d_corner, transformation_matrix)
                 # convert 3d bbx to 2d, (N,4)
                 projected_boxes2d = box_utils.corner_to_standup_box_torch(projected_boxes3d)
-                # (N, 5)
+                # Tensor shape: (N, 5)
                 boxes2d_score = torch.cat((projected_boxes2d, scores.unsqueeze(1)), dim=1)
 
                 pred_box2d_list.append(boxes2d_score)
@@ -151,7 +151,7 @@ class CiassdPostprocessor(VoxelPostprocessor):
 
         if len(pred_box2d_list) == 0 or len(pred_box3d_list) == 0:
             return None, None
-        # shape: (N, 5)
+        # Tensor shape: shape: (N, 5)
         pred_box2d_list = torch.vstack(pred_box2d_list)
         # scores
         scores = pred_box2d_list[:, -1]

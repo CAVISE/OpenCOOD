@@ -34,20 +34,9 @@ class CiassdLoss(nn.Module):
             batch_size = output_dict["batch_size"]
 
         # ########
-        # pred = torch.sigmoid(preds_dict['cls_preds'][0]).sum(dim=0).cpu().detach().numpy()
-        # tagt_pos = target_dict['pos_equal_one'][0].sum(dim=-1).cpu().detach().numpy()
-        # tagt_neg = target_dict['neg_equal_one'][0].sum(dim=-1).cpu().detach().numpy()
-        # import matplotlib.pyplot as plt
+
         #
-        # fig = plt.figure(figsize=(18, 8))
-        # ax1 = fig.add_subplot(3, 1, 1)
-        # ax1.imshow(pred, cmap='cool')
-        # ax2 = fig.add_subplot(3, 1, 2)
-        # ax2.imshow(tagt_pos, cmap='cool')
-        # ax3 = fig.add_subplot(3, 1, 3)
-        # ax3.imshow(tagt_neg, cmap='cool')
-        # plt.show()
-        # plt.close()
+
         # #########
 
         cls_labls = target_dict["pos_equal_one"].view(batch_size, -1, self.num_cls - 1)
@@ -55,7 +44,7 @@ class CiassdLoss(nn.Module):
         negatives = target_dict["neg_equal_one"].view(batch_size, -1, self.num_cls - 1) > 0
         cared = torch.logical_or(positives, negatives)
         cls_labls = cls_labls * cared.type_as(cls_labls)
-        # num_normalizer = cared.sum(1, keepdim=True)
+
         pos_normalizer = positives.sum(1, keepdim=True).float()
 
         # cls loss
@@ -85,7 +74,7 @@ class CiassdLoss(nn.Module):
 
         # iou loss
         iou_preds = preds_dict["iou_preds"].permute(0, 2, 3, 1).contiguous()
-        pos_pred_mask = reg_weights.squeeze(dim=-1) > 0  # (4, 70400)
+        pos_pred_mask = reg_weights.squeeze(dim=-1) > 0  # Tensor shape: (4, 70400)
         iou_pos_preds = iou_preds.view(batch_size, -1)[pos_pred_mask]
         boxes3d_pred = VoxelPostprocessor.delta_to_boxes3d(
             preds_dict["box_preds"].permute(0, 2, 3, 1).contiguous().detach(), output_dict["anchor_box"], False
@@ -173,16 +162,16 @@ def get_direction_target(reg_targets, anchors, one_hot=True, dir_offset=0.0):
     """
     batch_size = reg_targets.shape[0]
     anchors = anchors.view(1, -1, anchors.shape[-1]).repeat(batch_size, 1, 1)
-    rot_gt = reg_targets[..., -1] + anchors[..., -1]  # [4, 70400]
-    dir_cls_targets = ((rot_gt - dir_offset) > 0).long()  # [4, 70400]
+    rot_gt = reg_targets[..., -1] + anchors[..., -1]  # Tensor shape: [4, 70400]
+    dir_cls_targets = ((rot_gt - dir_offset) > 0).long()  # Tensor shape: [4, 70400]
     if one_hot:
         dir_cls_targets = one_hot_f(dir_cls_targets, 2, dtype=anchors.dtype)
     return dir_cls_targets
 
 
 def one_hot_f(tensor, depth, dim=-1, on_value=1.0, dtype=torch.float32):
-    tensor_onehot = torch.zeros(*list(tensor.shape), depth, dtype=dtype, device=tensor.device)  # [4, 70400, 2]
-    tensor_onehot.scatter_(dim, tensor.unsqueeze(dim).long(), on_value)  # [4, 70400, 2]
+    tensor_onehot = torch.zeros(*list(tensor.shape), depth, dtype=dtype, device=tensor.device)  # Tensor shape: [4, 70400, 2]
+    tensor_onehot.scatter_(dim, tensor.unsqueeze(dim).long(), on_value)  # Tensor shape: [4, 70400, 2]
     return tensor_onehot
 
 

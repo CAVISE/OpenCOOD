@@ -93,7 +93,6 @@ def main():
             vis_aabbs_pred.append(o3d.geometry.LineSet())
 
     for i, batch_data in tqdm(enumerate(data_loader)):
-        # print(i)
         with torch.no_grad():
             batch_data = train_utils.to_device(batch_data, device)
             if opt.fusion_method == "late":

@@ -52,24 +52,24 @@ class CavAttention(nn.Module):
 
     def forward(self, x, mask, prior_encoding):
         # x: (B, L, H, W, C) -> (B, H, W, L, C)
-        # mask: (B, L)
+        # Tensor shape: mask: (B, L)
         x = x.permute(0, 2, 3, 1, 4)
-        # mask: (B, 1, H, W, L, 1)
+        # Tensor shape: mask: (B, 1, H, W, L, 1)
         mask = mask.unsqueeze(1)
 
-        # qkv: [(B, H, W, L, C_inner) *3]
+        # Tensor shape: qkv: [(B, H, W, L, C_inner) *3]
         qkv = self.to_qkv(x).chunk(3, dim=-1)
-        # q: (B, M, H, W, L, C)
+        # Tensor shape: q: (B, M, H, W, L, C)
         q, k, v = map(lambda t: rearrange(t, "b h w l (m c) -> b m h w l c", m=self.heads), qkv)
 
-        # attention, (B, M, H, W, L, L)
+        # Tensor shape: attention, (B, M, H, W, L, L)
         att_map = torch.einsum("b m h w i c, b m h w j c -> b m h w i j", q, k) * self.scale
         # add mask
         att_map = att_map.masked_fill(mask == 0, -float("inf"))
         # softmax
         att_map = self.attend(att_map)
 
-        # out:(B, M, H, W, L, C_head)
+        # Tensor shape: out:(B, M, H, W, L, C_head)
         out = torch.einsum("b m h w i j, b m h w j c -> b m h w i c", att_map, v)
         out = rearrange(out, "b m h w l c -> b h w l (m c)", m=self.heads)
         out = self.to_out(out)

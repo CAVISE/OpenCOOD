@@ -15,7 +15,7 @@ from opencood.visualization import vis_utils
 class BevPostprocessor(BasePostprocessor):
     def __init__(self, anchor_params, train):
         super(BevPostprocessor, self).__init__(anchor_params, train)
-        # self.geometry_param = anchor_params["geometry"]
+
         self.geometry_param = anchor_params["geometry_param"]
 
         # TODO
@@ -42,24 +42,24 @@ class BevPostprocessor(BasePostprocessor):
         """
 
         assert self.params["order"] == "lwh", "Currently BEV only support lwh bbx order."
-        # (max_num, 7)
+        # Tensor shape: (max_num, 7)
         gt_box_center = kwargs["gt_box_center"]
 
         # (max_num)
         masks = kwargs["mask"]
 
-        # (n, 7)
+        # Tensor shape: (n, 7)
         gt_box_center_valid = gt_box_center[masks == 1]
-        # (n, 4, 3)
+        # Tensor shape: (n, 4, 3)
         bev_corners = box_utils.boxes_to_corners2d(gt_box_center_valid, self.params["order"])
 
         _ = gt_box_center_valid.shape[0]  # n
-        # (n, 4, 2)
+        # Tensor shape: (n, 4, 2)
         bev_corners = bev_corners[:, :, :2]
         yaw = gt_box_center_valid[:, -1]
         x, y = gt_box_center_valid[:, 0], gt_box_center_valid[:, 1]
         dx, dy = gt_box_center_valid[:, 3], gt_box_center_valid[:, 4]
-        # (n, 6)
+        # Tensor shape: (n, 6)
         reg_targets = np.column_stack([np.cos(yaw), np.sin(yaw), x, y, dx, dy])
 
         # target label map including classification and regression targets
@@ -67,7 +67,7 @@ class BevPostprocessor(BasePostprocessor):
         self.update_label_map(label_map, bev_corners, reg_targets)
         label_map = self.normalize_targets(label_map)
         label_dict = {
-            # (7, label_shape[0], label_shape[1])
+            # Tensor shape: (7, label_shape[0], label_shape[1])
             "label_map": np.transpose(label_map, (2, 0, 1)).astype(np.float32),
             "bev_corners": bev_corners,
         }
@@ -103,7 +103,7 @@ class BevPostprocessor(BasePostprocessor):
         y = np.arange(self.geometry_param["label_shape"][1])
         xx, yy = np.meshgrid(x, y)
 
-        # (label_shape[0]*label_shape[1], 2)
+        # Tensor shape: (label_shape[0]*label_shape[1], 2)
         points = np.concatenate([xx.reshape(-1, 1), yy.reshape(-1, 1)], axis=-1)
         bev_origin_dist = bev_origin / res / downsample_rate
 
@@ -187,7 +187,7 @@ class BevPostprocessor(BasePostprocessor):
         """
         label_map_list = [x["label_map"][np.newaxis, ...] for x in label_batch_list]
         processed_batch = {
-            # (batch_size, 7, label_shape[0], label_shape[1])
+            # Tensor shape: (batch_size, 7, label_shape[0], label_shape[1])
             "label_map": torch.from_numpy(np.concatenate(label_map_list, axis=0)),
             "bev_corners": [torch.from_numpy(x["bev_corners"]) for x in label_batch_list],
         }
