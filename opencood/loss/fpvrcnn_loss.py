@@ -58,7 +58,7 @@ class FpvrcnnLoss(nn.Module):
         num_pos_smps = max(num_neg, 2)
         pos_indices = torch.where(pos)[1]
         not_selsected = torch.randperm(num_pos)[: num_pos - num_pos_smps]
-        # not_selsected_indices = pos_indices[not_selsected]
+
         weights[:, pos_indices[not_selsected]] = 0
         loss_reg = weighted_smooth_l1_loss(rcnn_reg, tgt_reg, weights=weights / max(weights.sum(), 1)).sum()
 
@@ -67,7 +67,6 @@ class FpvrcnnLoss(nn.Module):
         loss_reg_reduced = loss_reg * self.reg["weight"]
 
         # if torch.isnan(loss_reg_reduced):
-        #     print('debug')
 
         rcnn_loss = loss_cls_reduced + loss_iou_reduced + loss_reg_reduced
         loss = rcnn_loss + ciassd_loss

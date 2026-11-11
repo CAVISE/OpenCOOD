@@ -30,7 +30,7 @@ def normalize_pairwise_tfm(pairwise_t_matrix, H, W, discrete_ratio, downsample_r
         normalized_affine_matrix: torch.tensor
             [B, L, L, 2, 3], B batchsize, L max_cav
     """
-    pairwise_t_matrix = pairwise_t_matrix[:, :, :, [0, 1], :][:, :, :, :, [0, 1, 3]]  # [B, L, L, 2, 3]
+    pairwise_t_matrix = pairwise_t_matrix[:, :, :, [0, 1], :][:, :, :, :, [0, 1, 3]]  # Tensor shape: [B, L, L, 2, 3]
     pairwise_t_matrix[..., 0, 1] = pairwise_t_matrix[..., 0, 1] * H / W
     pairwise_t_matrix[..., 1, 0] = pairwise_t_matrix[..., 1, 0] * W / H
     pairwise_t_matrix[..., 0, 2] = pairwise_t_matrix[..., 0, 2] / (downsample_rate * discrete_ratio * W) * 2

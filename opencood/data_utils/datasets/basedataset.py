@@ -100,7 +100,7 @@ class BaseDataset(Dataset):
             self.loc_err_flag = False
             self.xyz_noise_std = 0
             self.ryp_noise_std = 0
-            self.data_size = 0  # Mb (Megabits)
+            self.data_size = 0  # Data size in megabits.
             self.transmission_speed = 27  # Mbps
             self.backbone_delay = 0  # ms
 
